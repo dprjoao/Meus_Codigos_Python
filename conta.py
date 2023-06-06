@@ -1,5 +1,6 @@
 List = []
-i = 0
-for i in range(10):
-    i = i + i
-    print(i)
+soma = 0
+for i in range(11):
+    #i = i + i 
+    soma += i 
+    print(soma,i)
