@@ -1,11 +1,3 @@
-import sys
-
-#def main(a):
-print("Arguments,", len(sys.argv))
-print("Args list", str(sys.argv))
-
-a = sys.argv[1]
-
-print(a)  
-#if __name__ == '__main__':
-#    main(sys.argv[1:])
+imp = signal.unit_impulse(100, 'mid')
+b, a = signal.butter(4, 0.2)
+response = signal.lfilter(b, a, imp)

@@ -16,7 +16,7 @@ def getOrmsby(f,Duration, Sampling):
     wav   = term1/den1 - term2/den2;
     wav /= np.amax(wav)
     return t, wav
-time, wvlt = getOrmsby((5,10,40,50),0.5,0.004)
+time, wvlt = getOrmsby((5,10,50,70),0.5,0.004)
 plt.plot(time,wvlt)
 plt.xlabel('Tempo (s)')
 plt.ylabel('Ondaleta (w)')
