@@ -8,11 +8,6 @@ def butter_bandpass_filter(data, lowcut, highcut, fs, order=2):
     y = lfilter(b, a, data)
     return y
 
-def Ricker_Wavelet(Peak_freq, Duration, Sampling) :
-        t = np.linspace(-Duration,Duration,125)
-        ricker = (1. -2.*(np.pi**2)*(Peak_freq**2)*(t**2))*np.exp(-(np.pi**2)*(Peak_freq**2)*(t**2))
-        return t, ricker
-
 if __name__ == "__main__":
     import numpy as np
     import matplotlib.pyplot as plt
@@ -51,9 +46,6 @@ if __name__ == "__main__":
     #plt.figure(2)
     #plt.clf()
     #plt.plot(t, x, label='Noisy signal')
-
-    
-    Time , x = Ricker_Wavelet(250,0.5,0.004)
 
     y = butter_bandpass_filter(x, lowcut, highcut, fs, order=1)
     plt.plot(Time, y, label='Filtered signal (%g Hz)' % fs)

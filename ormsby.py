@@ -16,12 +16,22 @@ def getOrmsby(f,Duration, Sampling):
     wav   = term1/den1 - term2/den2;
     wav /= np.amax(wav)
     return t, wav
-time, wvlt = getOrmsby((5,10,50,70),0.5,0.004)
+time, wvlt = getOrmsby((5,10,50,70),1,0.004)
+
+orms_fft = abs(np.fft.rfft(wvlt))
+
 plt.plot(time,wvlt)
 plt.xlabel('Tempo (s)')
 plt.ylabel('Ondaleta (w)')
 plt.grid()
 plt.show()
+
+plt.plot(orms_fft)
+plt.xlabel('Frequência (hz)')
+plt.ylabel('Amplitude relativa')
+plt.grid()
+plt.show()
+
     
 
 
