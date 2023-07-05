@@ -36,12 +36,12 @@ Once again, a two-steps inversion strategy can also be used to deal
 with the case of noisy data.
 
 """
-import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt # type: ignore
 import numpy as np
-from scipy.signal import filtfilt
+from scipy.signal import filtfilt # type: ignore
 
-import pylops
-from pylops.utils.wavelets import ricker
+import pylops # type: ignore
+from pylops.utils.wavelets import ricker # type: ignore
 
 plt.close("all")
 np.random.seed(0)
