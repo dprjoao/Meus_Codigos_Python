@@ -4,13 +4,13 @@ import sys
 import numpy as np 
 import matplotlib.pyplot as plt # type: ignore
 from numpy.typing import NDArray
+from typing import Tuple, overload
 
-def Ricker_Wavelet(Peak_freq: float, Samples: float, Dt: float) -> tuple[NDArray, NDArray]:
+def Ricker_Wavelet(Peak_freq: float, Samples: float, Dt: float) -> Tuple[NDArray, NDArray]:
     t = np.arange(Samples)*(Dt/1000)
     t = np.concatenate((np.flipud(-t[1:]), t), axis=0)
     ricker = (1. -2.*(np.pi**2)*(Peak_freq**2)*(t**2))*np.exp(-(np.pi**2)*(Peak_freq**2)*(t**2))
     return t, ricker
-
 
 Peak_freq = float(sys.argv[1])
 Samples = float(sys.argv[2])
