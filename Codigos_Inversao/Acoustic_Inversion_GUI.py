@@ -22,11 +22,38 @@ class Funcs():
             with segyio.open(filename, iline=189, xline=193) as stack:
                 ils, xls, twt = stack.ilines, stack.xlines, stack.samples
                 data_cube = segyio.cube(stack)
+                n_traces = stack.tracecount 
+                tr = stack.attributes(segyio.TraceField.TraceNumber)[-1]
+                if not isinstance(tr, int):
+                    tr = stack.attributes(segyio.TraceField.TraceNumber)[-2] + 1
+                tr = int(tr[0])
             il, xl, t = ils, xls, twt
+            il_start, il_end = il[0], il[-1]
+            xl_start, xl_end = xl[0], xl[-1]
+            dt = t[1] - t[0]
+
             self.status_label.config(text=f"File loaded: {filename}")
             # Enable the button to open the parameter input window
             self.parameter_button.config(state=NORMAL)
             print("File loaded successfully.")
+            # Define data as 2D/3D and Post-stack/Pre-stack
+            if len(data_cube.shape) == 3:
+                if data_cube.shape[0] != 1:
+                    data_type = 'Post-stack 3D'
+                else:
+                    if n_traces > tr > 1:   
+                        data_type = 'Post-stack 3D'
+                    else:
+                        data_type = 'Post-stack 2D'
+            if data_type == 'Post-stack 3D':
+                fig, ax = plt.subplots(1, 1, figsize=(10, 5))
+                c = ax.imshow(data_cube[..., int(4000/dt)].T, aspect='auto', cmap='gray_r', vmin=-0.1*data_cube.max(), vmax=0.1*data_cube.max(),
+                            extent=[xl_start, xl_end, il_start, il_end])
+                plt.colorbar(c, ax=ax, pad=0.01)
+                plt.grid(False)
+                plt.show()
+            else:
+                pass           
             return data_cube, il, xl, t
         else:
             return None, None, None, None
