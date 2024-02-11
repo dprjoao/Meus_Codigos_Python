@@ -61,15 +61,18 @@ class Funcs():
         nt_wav = 16
         nfft = 2**8
         dt = t[1] - t[0]
-        wav_est = np.mean(np.abs(np.fft.fft(data_cube[..., int(self.tmin/dt):int(self.tmax/dt)], nfft, axis=-1)), axis=(0, 1))
-        wav_est = np.real(np.fft.ifft(wav_est)[:nt_wav])
+        wav_est_fft = np.mean(np.abs(np.fft.fft(data_cube[..., int(self.tmin/dt):int(self.tmax/dt)], nfft, axis=-1)), axis=(0, 1))
+        fwest = np.fft.fftfreq(nfft, d=dt/1000)
+        wav_est = np.real(np.fft.ifft(wav_est_fft)[:nt_wav])
         wav_est = np.concatenate((np.flipud(wav_est[1:]), wav_est), axis=0)
         wav_est = wav_est / wav_est.max()
-        wcenter = np.argmax(np.abs(wav_est))
-        fig, axs = plt.subplots(1, 2, figsize=(20, 5))
+        # display wavelet
+        fig, axs = plt.subplots(1, 2, figsize=(10, 5))
         fig.suptitle('Statistical wavelet estimate')
-        axs[0].plot(wav_est, 'k')
-        axs[0].set_title('Time')
+        axs[0].plot(fwest[:nfft//2], wav_est_fft[:nfft//2], 'k')
+        axs[0].set_title('Frequency')
+        axs[1].plot(wav_est, 'k')
+        axs[1].set_title('Time');
         plt.show()
         return wav_est
 
@@ -80,7 +83,7 @@ class Funcs():
         il_start = il[0]
         xl_start, xl_end = xl[0], xl[-1]
         dt = t[1] - t[0]
-        d_small = data_cube[..., int(self.tmin/dt):int(self.tmax/dt)]
+        d_small = data_cube[self.il_number - il_start, :, int(self.tmin/dt):int(self.tmax/dt)]
         d_small = np.swapaxes(d_small, -1, 0)
         
         print("\n -------------Running trace-by-trace inversion------------- \n")
@@ -92,7 +95,7 @@ class Funcs():
         d_small = np.swapaxes(d_small, 0, -1)
 
         fig, ax = plt.subplots(1, 1, figsize=(10, 5))
-        c = ax.imshow(m_tbt[self.il_number - il_start, :, :].T, aspect='auto', cmap='seismic', vmin=-0.1*m_tbt.max(), vmax=0.1*m_tbt.max(),
+        c = ax.imshow(m_tbt.T, aspect='auto', cmap='seismic', vmin=-0.1*m_tbt.max(), vmax=0.1*m_tbt.max(),
                     extent=[xl_start, xl_end, t[int(self.tmax/dt)], t[int(self.tmin/dt)]])
         plt.colorbar(c, ax=ax, pad=0.01)
         plt.grid(False)
@@ -104,7 +107,7 @@ class Funcs():
         il_start = il[0]
         xl_start, xl_end = xl[0], xl[-1]
         dt = t[1] - t[0]
-        d_small = data_cube[..., int(self.tmin/dt):int(self.tmax/dt)]
+        d_small = data_cube[self.il_number - il_start, :, int(self.tmin/dt):int(self.tmax/dt)]
         d_small = np.swapaxes(d_small, -1, 0)
         #-----------------------------------------------------------------------------------------------------
         # Spatially simultaneous
@@ -131,7 +134,7 @@ class Funcs():
         d_small = np.swapaxes(d_small, 0, -1)
 
         fig, ax = plt.subplots(1, 1, figsize=(10, 5))
-        c = ax.imshow(m_relative_reg[self.il_number - il_start, :, :].T, aspect='auto', cmap='seismic', vmin=-0.1*m_relative_reg.max(), vmax=0.1*m_relative_reg.max(),
+        c = ax.imshow(m_relative_reg.T, aspect='auto', cmap='seismic', vmin=-0.1*m_relative_reg.max(), vmax=0.1*m_relative_reg.max(),
                     extent=[xl_start, xl_end, t[int(self.tmax/dt)], t[int(self.tmin/dt)]])
         plt.colorbar(c, ax=ax, pad=0.01)
         plt.grid(False)
@@ -144,7 +147,7 @@ class Funcs():
         il_start = il[0]
         xl_start, xl_end = xl[0], xl[-1]
         dt = t[1] - t[0]
-        d_small = data_cube[..., int(self.tmin/dt):int(self.tmax/dt)]
+        d_small = data_cube[self.il_number - il_start, :, int(self.tmin/dt):int(self.tmax/dt)]
         d_small = np.swapaxes(d_small, -1, 0)
         #-----------------------------------------------------------------------------------------------------
         # Blocky simultaneous
@@ -159,7 +162,6 @@ class Funcs():
 
         print("\n -------------Running spatially regularized blocky promoting simultaneous inversion------------- \n")
         
-        #self.d_small = np.swapaxes(self.d_small, -1, 0)
 
         m_blocky, r_blocky = \
             pylops.avo.poststack.PoststackInversion(d_small, wav_est/2, m0=np.zeros_like(d_small), explicit=False, 
@@ -172,7 +174,7 @@ class Funcs():
         d_small = np.swapaxes(d_small, 0, -1)
         
         fig, ax = plt.subplots(1, 1, figsize=(10, 5))
-        c = ax.imshow(m_blocky[self.il_number - il_start, :, :].T, aspect='auto', cmap='seismic', vmin=-0.1*m_blocky.max(), vmax=0.1*m_blocky.max(),
+        c = ax.imshow(m_blocky.T, aspect='auto', cmap='seismic', vmin=-0.1*m_blocky.max(), vmax=0.1*m_blocky.max(),
                     extent=[xl_start, xl_end, t[int(self.tmax/dt)], t[int(self.tmin/dt)]])
         plt.colorbar(c, ax=ax, pad=0.01)
         plt.grid(False)
@@ -190,7 +192,7 @@ class Funcs():
             dt = t[1] - t[0]
 
             fig, ax = plt.subplots(1, 1, figsize=(10, 5))
-            c = ax.imshow(data_cube[self.il_number - il_start, :, int(self.tmin/dt):int(self.tmax/dt)].T, aspect='auto', cmap='seismic', vmin=-0.1*data_cube.max(), vmax=0.1*data_cube.max(),
+            c = ax.imshow(data_cube[self.il_number - il_start, :, int(self.tmin/dt):int(self.tmax/dt)].T, aspect='auto', cmap='gray_r', vmin=-0.1*data_cube.max(), vmax=0.1*data_cube.max(),
                         extent=[xl_start, xl_end, t[int(self.tmax/dt)], t[int(self.tmin/dt)]])
             plt.colorbar(c, ax=ax, pad=0.01)
             plt.grid(False)
@@ -232,26 +234,31 @@ class Application(Funcs):
 
         # Create widgets
         load_button = Button(self.frame_1, text="Load File", command=self.load_file)
-        load_button.place(relx=0.1, rely=0.1, relwidth= 0.2, relheight= 0.1)
-
-        run_button = Button(self.frame_1, text="Run inversion", command=self.run_inversion)
-        run_button.place(relx=0.8, rely=0.3, relwidth=0.2, relheight=0.1)
-
-        il_number_label = Label(self.frame_1, text="Enter IL number for display")
-        il_number_label.place(relx=0.35, rely=0.0, relwidth= 0.3, relheight= 0.1)
-        self.il_entry = Entry(self.frame_1)
-        self.il_entry.place(relx=0.4, rely=0.1, relwidth= 0.25, relheight= 0.1)       
-        il_entry_bt = Button(self.frame_1, text="Display IL", command=self.get_iline_num)
-        il_entry_bt.place(relx=0.4, rely=0.2, relwidth= 0.2, relheight= 0.1)
-        self.il_label = Label(self.frame_1, text="")
-        self.il_label.place(relx=0.6, rely=0.1, relwidth= 0.2, relheight= 0.1)
-
-        open_button2 = Button(self.frame_1, text="Close the window", command=self.root.destroy)
-        open_button2.place(relx=0.1, rely=0.3, relwidth= 0.2, relheight= 0.1)
+        load_button.place(relx=0.01, rely=0.01, relwidth= 0.2, relheight= 0.1)
 
         # Button to open the parameter input window (disabled initially)
         self.parameter_button = Button(self.frame_1, text="Enter parameters", command=self.open_parameter_window, state=DISABLED)
-        self.parameter_button.place(relx=0.1, rely=0.2, relwidth= 0.2, relheight= 0.1)
+        self.parameter_button.place(relx=0.01, rely=0.11, relwidth= 0.2, relheight= 0.1)
+
+        #Button to close aplication window
+        open_button2 = Button(self.frame_1, text="Close the window", command=self.root.destroy)
+        open_button2.place(relx=0.01, rely=0.21, relwidth= 0.2, relheight= 0.1)
+
+        #Run inversion button
+        run_button = Button(self.frame_1, text="Run inversion", command=self.run_inversion)
+        run_button.place(relx=0.8, rely=0.3, relwidth=0.2, relheight=0.1)
+        
+        #Inline display and buttons
+        il_number_label = Label(self.frame_1, text="Enter IL number for display")
+        il_number_label.place(relx=0.2, rely=0.0, relwidth= 0.3, relheight= 0.1)
+        self.il_entry = Entry(self.frame_1)
+        self.il_entry.place(relx=0.25, rely=0.1, relwidth= 0.2, relheight= 0.1)       
+        il_entry_bt = Button(self.frame_1, text="Display IL", command=self.get_iline_num)
+        il_entry_bt.place(relx=0.25, rely=0.2, relwidth= 0.2, relheight= 0.1)
+        self.il_label = Label(self.frame_1, text="")
+        self.il_label.place(relx=0.45, rely=0.1, relwidth= 0.2, relheight= 0.1)
+
+
 
         # Status label
         self.status_label = Label(self.frame_1, text="")
