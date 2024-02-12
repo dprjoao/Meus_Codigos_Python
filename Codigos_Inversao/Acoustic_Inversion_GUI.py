@@ -57,6 +57,29 @@ class Funcs():
             return data_cube, il, xl, t
         else:
             return None, None, None, None
+    def open_reg_inv_parameter_window(self):
+            parameter_window = Toplevel(self.root)
+            parameter_window.title("Regularized Inversion Parameters")
+
+            # Create labels and entry widgets for parameter input
+            niter_label = Label(parameter_window, text="Number of iterations:")
+            niter_label.grid(row=0, column=0)
+            self.niter_entry = Entry(parameter_window)
+            self.niter_entry.grid(row=0, column=1)
+
+            epsI_label = Label(parameter_window, text="Damping (epsI):")
+            epsI_label.grid(row=1, column=0)
+            self.epsI_entry = Entry(parameter_window)
+            self.epsI_entry.grid(row=1, column=1)
+
+            epsR_label = Label(parameter_window, text="Spatial regularization (epsR):")
+            epsR_label.grid(row=2, column=0)
+            self.epsR_entry = Entry(parameter_window)
+            self.epsR_entry.grid(row=2, column=1)
+
+            # Button to execute the reg_inv function with provided parameters
+            run_button = Button(parameter_window, text="Run Inversion", command=self.reg_inv)
+            run_button.grid(row=3, columnspan=2)
 
     def open_parameter_window(self):
         parameter_window = Toplevel(self.root)
@@ -77,8 +100,100 @@ class Funcs():
 
         estimate_button = Button(parameter_window, text="Estimate Wavelet", command=self.estimate_wavelet)
         estimate_button.grid(row=3,column=1)
+        
+        close_button = Button(parameter_window, text="Close", command= parameter_window.destroy)
+        close_button.grid(row=4,column=1)
+        
         return self.tmin_entry, self.tmax_entry
 
+    def tbt_inv_param_win(self):
+        inv_param_win = Toplevel(self.root)
+        inv_param_win.title("Parameter Input")
+
+        epsI_label = Label(inv_param_win, text="Damping (epsI):")
+        epsI_label.grid(row=0, column=0)
+        self.epsI_entry = Entry(inv_param_win)
+        self.epsI_entry.grid(row=0, column=1)
+
+        run_inv_button = Button(inv_param_win, text="Run inversion", command=self.run_inversion)
+        run_inv_button.grid(row=1,column=1)
+        
+        close_button = Button(inv_param_win, text="Close", command= inv_param_win.destroy)
+        close_button.grid(row=2,column=1)
+
+
+    def spat_inv_param_win(self):
+        inv_param_win = Toplevel(self.root)
+        inv_param_win.title("Parameter Input")
+
+        # Create labels and entry widgets for parameter input
+        niter_label = Label(inv_param_win, text="Number of iterations:")
+        niter_label.grid(row=0, column=0)
+        self.niter_sr_entry = Entry(inv_param_win)
+        self.niter_sr_entry.grid(row=0, column=1)
+
+        epsI_label = Label(inv_param_win, text="Damping (epsI):")
+        epsI_label.grid(row=1, column=0)
+        self.epsI_sr_entry = Entry(inv_param_win)
+        self.epsI_sr_entry.grid(row=1, column=1)
+
+        epsR_label = Label(inv_param_win, text="Spatial regularization (epsR):")
+        epsR_label.grid(row=2, column=0)
+        self.epsR_sr_entry = Entry(inv_param_win)
+        self.epsR_sr_entry.grid(row=2, column=1)
+
+
+        run_inv_button = Button(inv_param_win, text="Run inversion", command=self.run_inversion)
+        run_inv_button.grid(row=3,column=1)
+        
+        close_button = Button(inv_param_win, text="Close", command= inv_param_win.destroy)
+        close_button.grid(row=4,column=1)
+
+    def blocky_inv_param_win(self):
+        inv_param_win = Toplevel(self.root)
+        inv_param_win.title("Parameter Input")
+
+        # Create labels and entry widgets for parameter input
+        niter_out_label = Label(inv_param_win, text="Number of outer loop iterations:")
+        niter_out_label.grid(row=0, column=0)
+        self.niter_out_b_entry = Entry(inv_param_win)
+        self.niter_out_b_entry.grid(row=0, column=1)
+
+        niter_in_b_label = Label(inv_param_win, text="Number of inner loop iterations:")
+        niter_in_b_label.grid(row=1, column=0)
+        self.niter_in_b_entry = Entry(inv_param_win)
+        self.niter_in_b_entry.grid(row=1, column=1)
+
+        niter_b_label = Label(inv_param_win, text="Number of iterations of lsqr:")
+        niter_b_label.grid(row=2, column=0)
+        self.niter_b_entry = Entry(inv_param_win)
+        self.niter_b_entry.grid(row=2, column=1)
+
+        mu_b_label = Label(inv_param_win, text="Data term damping:")
+        mu_b_label.grid(row=3, column=0)
+        self.mu_b_entry = Entry(inv_param_win)
+        self.mu_b_entry.grid(row=3, column=1)
+
+        epsI_b_label = Label(inv_param_win, text="Damping:")
+        epsI_b_label.grid(row=4, column=0)
+        self.epsI_b_entry = Entry(inv_param_win)
+        self.epsI_b_entry.grid(row=4, column=1)
+
+        epsR_b_label = Label(inv_param_win, text="Spatial regularization:")
+        epsR_b_label.grid(row=5, column=0)
+        self.epsR_b_entry = Entry(inv_param_win)
+        self.epsR_b_entry.grid(row=5, column=1)
+
+        epsRL1_b_label = Label(inv_param_win, text="Blocky regularization:")
+        epsRL1_b_label.grid(row=6, column=0)
+        self.epsRL1_b_entry = Entry(inv_param_win)
+        self.epsRL1_b_entry.grid(row=6, column=1)
+
+        run_inv_button = Button(inv_param_win, text="Run inversion", command=self.run_inversion)
+        run_inv_button.grid(row=7,column=1)
+        
+        close_button = Button(inv_param_win, text="Close", command= inv_param_win.destroy)
+        close_button.grid(row=8,column=1)
 
     # Function for wavelet estimation
     def estimate_wavelet(self):
@@ -106,7 +221,7 @@ class Funcs():
     # Function for post-stack inversion
     def tbt_inv(self):
         global data_cube, il, t, wav_est, m_tbt
-
+        self.epsI = float(self.epsI_entry.get())
         il_start = il[0]
         xl_start, xl_end = xl[0], xl[-1]
         dt = t[1] - t[0]
@@ -116,7 +231,7 @@ class Funcs():
         print("\n -------------Running trace-by-trace inversion------------- \n")
         
         m_tbt, r_tbt = pylops.avo.poststack.PoststackInversion(d_small, wav_est/2, m0=np.zeros_like(d_small), explicit=True,
-                                                                    epsI=1e-3, simultaneous=False)
+                                                                    epsI=self.epsI, simultaneous=False)
         m_tbt = np.swapaxes(m_tbt, 0, -1)
         r_tbt = np.swapaxes(r_tbt, 0, -1)
         d_small = np.swapaxes(d_small, 0, -1)
@@ -128,21 +243,19 @@ class Funcs():
         plt.grid(False)
         plt.show()
         return m_tbt
+    
     # Function for post-stack inversion
-    def spat_reg(self):
+    def spat_inv(self):
         global data_cube, il, t, wav_est, m_tbt
+        self.niter_sr = int(self.niter_sr_entry.get())
+        self.epsI_sr = float(self.epsI_sr_entry.get())
+        self.epsR_sr = float(self.epsR_sr_entry.get())
+
         il_start = il[0]
         xl_start, xl_end = xl[0], xl[-1]
         dt = t[1] - t[0]
         d_small = data_cube[self.il_number - il_start, :, int(self.tmin/dt):int(self.tmax/dt)]
         d_small = np.swapaxes(d_small, -1, 0)
-        #-----------------------------------------------------------------------------------------------------
-        # Spatially simultaneous
-        niter_sr = 10 # number of iterations of lsqr
-        epsI_sr = 1e-4 # damping
-        epsR_sr = 1e2 # spatial regularization
-        
-
 
         print("\n -------------Running spatially regularized simultaneous inversion------------- \n")
         
@@ -153,8 +266,8 @@ class Funcs():
             m0 = m_tbt.T
         
         m_relative_reg, r_relative_reg = \
-            pylops.avo.poststack.PoststackInversion(d_small, wav_est/2, m0=m0, epsI=epsI_sr, epsR=epsR_sr, 
-                                            **dict(iter_lim=niter_sr, show=2))
+            pylops.avo.poststack.PoststackInversion(d_small, wav_est/2, m0=m0, epsI=self.epsI_sr, epsR=self.epsR_sr, 
+                                            **dict(iter_lim=self.niter_sr, show=2))
 
         m_relative_reg = np.swapaxes(m_relative_reg, 0, -1)
         r_relative_reg = np.swapaxes(r_relative_reg, 0, -1)
@@ -171,31 +284,28 @@ class Funcs():
     def blocky_inv(self):
         global data_cube, il, t, wav_est
 
+        self.niter_b = int(self.niter_b_entry.get())
+        self.niter_out_b = int(self.niter_out_b_entry.get())
+        self.niter_in_b = int(self.niter_in_b_entry.get())
+        self.mu_b = float(self.mu_b_entry.get())
+        self.epsI_b = float(self.epsI_b_entry.get())
+        self.epsR_b = float(self.epsR_b_entry.get())
+        self.epsRL1_b = float(self.epsRL1_b_entry.get())
+
         il_start = il[0]
         xl_start, xl_end = xl[0], xl[-1]
         dt = t[1] - t[0]
         d_small = data_cube[self.il_number - il_start, :, int(self.tmin/dt):int(self.tmax/dt)]
         d_small = np.swapaxes(d_small, -1, 0)
-        #-----------------------------------------------------------------------------------------------------
-        # Blocky simultaneous
-        niter_out_b = 3 # number of outer loop iterations
-        niter_in_b = 1 # number of inner loop iterations
-        niter_b = 10 # number of iterations of lsqr
-        mu_b = 1e-1 # damping for data term
-        epsI_b = 1e-4 # damping
-        epsR_b = 0.1 # spatial regularization
-        epsRL1_b = 0.2 # blocky regularization
-        #-----------------------------------------------------------------------------------------------------
 
         print("\n -------------Running spatially regularized blocky promoting simultaneous inversion------------- \n")
         
-
         m_blocky, r_blocky = \
             pylops.avo.poststack.PoststackInversion(d_small, wav_est/2, m0=np.zeros_like(d_small), explicit=False, 
-                                                    epsR=epsR_b, epsRL1=epsRL1_b,
-                                                    **dict(mu=mu_b, niter_outer=niter_out_b, 
-                                                        niter_inner=niter_in_b, show=True,
-                                                        iter_lim=niter_b, damp=epsI_b))
+                                                    epsR=self.epsR_b, epsRL1=self.epsRL1_b,
+                                                    **dict(mu=self.mu_b, niter_outer=self.niter_out_b, 
+                                                        niter_inner=self.niter_in_b, show=True,
+                                                        iter_lim=self.niter_b, damp=self.epsI_b))
         m_blocky = np.swapaxes(m_blocky, 0, -1)
         r_blocky = np.swapaxes(r_blocky, 0, -1)
         d_small = np.swapaxes(d_small, 0, -1)
@@ -228,14 +338,25 @@ class Funcs():
         except ValueError:
             self.status_label.config(text="Error: Please enter valid IL number.")
             return None
-        
+   
+    def inversion_param_wind(self):
+            inversion_type = self.inversion_type.get()
+            if inversion_type == 1:
+                self.blocky_inv_param_win()
+            elif inversion_type == 2:
+                # Run regularized spatial inversion
+                self.spat_inv_param_win()
+            elif inversion_type == 3:
+                # Run regularized inversion
+                self.tbt_inv_param_win()
+           
     def run_inversion(self):
             inversion_type = self.inversion_type.get()
             if inversion_type == 1:
                 self.blocky_inv()
             elif inversion_type == 2:
                 # Run regularized spatial inversion
-                self.spat_reg()
+                self.spat_inv()
             elif inversion_type == 3:
                 # Run regularized inversion
                 self.tbt_inv()
@@ -250,7 +371,7 @@ class Application(Funcs):
 
     def tela_load(self):
         self.root.title("File Loader")
-        self.root.configure(background='lightblue')
+        self.root.configure(background='DarkTurquoise')
         self.root.geometry("600x400")
         self.root.resizable(True, True)
     def frames(self):
@@ -268,11 +389,11 @@ class Application(Funcs):
         self.parameter_button.place(relx=0.01, rely=0.11, relwidth= 0.2, relheight= 0.1)
 
         #Button to close aplication window
-        open_button2 = Button(self.frame_1, text="Close the window", command=self.root.destroy)
-        open_button2.place(relx=0.01, rely=0.21, relwidth= 0.2, relheight= 0.1)
+        close_button2 = Button(self.frame_1, text="Close the window", command=self.root.destroy)
+        close_button2.place(relx=0.01, rely=0.21, relwidth= 0.2, relheight= 0.1)
 
         #Run inversion button
-        run_button = Button(self.frame_1, text="Run inversion", command=self.run_inversion)
+        run_button = Button(self.frame_1, text="Open inversion params", command=self.inversion_param_wind)
         run_button.place(relx=0.8, rely=0.3, relwidth=0.2, relheight=0.1)
         
         #Inline display and buttons
@@ -284,8 +405,6 @@ class Application(Funcs):
         il_entry_bt.place(relx=0.25, rely=0.2, relwidth= 0.2, relheight= 0.1)
         self.il_label = Label(self.frame_1, text="")
         self.il_label.place(relx=0.45, rely=0.1, relwidth= 0.2, relheight= 0.1)
-
-
 
         # Status label
         self.status_label = Label(self.frame_1, text="")
