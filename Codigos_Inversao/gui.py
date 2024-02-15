@@ -63,7 +63,7 @@ def load_file():
                     data_type = 'Post-stack 2D'
             if data_type == 'Post-stack 3D':
                 fig, ax = plt.subplots(1, 1, figsize=(10, 5))
-                c = ax.imshow(data_cube[..., int(4000/dt)].T, aspect='auto', cmap='gray_r', vmin=-0.1*data_cube.max(), vmax=0.1*data_cube.max(),
+                c = ax.imshow(data_cube[..., int(4000/dt)], aspect='auto', cmap='gray_r', vmin=-0.1*data_cube.max(), vmax=0.1*data_cube.max(),
                             extent=[xl_start, xl_end, il_start, il_end])
                 plt.colorbar(c, ax=ax, pad=0.01)
                 plt.grid(False)
@@ -346,16 +346,18 @@ canvas = Canvas(
     highlightthickness = 0,
     relief = "ridge"
 )
-
+canvas.pack(expand=True, fill="both")
 canvas.place(x = 0, y = 0)
 
 canvas.create_text(
-    190.0,
-    13.0,
+    180.0,
+    20.0,
     text="Enter IL:",
     fill="#000000",
     font=("Inter", 12 * -1)
 )
+canvas.pack(expand = True)
+
 il_entry = Entry(window)
 il_entry.place(
     x=159.0,

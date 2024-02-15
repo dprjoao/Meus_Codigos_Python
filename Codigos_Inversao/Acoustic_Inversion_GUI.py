@@ -47,7 +47,7 @@ class Funcs():
                         data_type = 'Post-stack 2D'
             if data_type == 'Post-stack 3D':
                 fig, ax = plt.subplots(1, 1, figsize=(10, 5))
-                c = ax.imshow(data_cube[..., int(4000/dt)].T, aspect='auto', cmap='gray_r', vmin=-0.1*data_cube.max(), vmax=0.1*data_cube.max(),
+                c = ax.imshow(data_cube[..., int(4000/dt)], aspect='auto', cmap='gray_r', vmin=-0.1*data_cube.max(), vmax=0.1*data_cube.max(),
                             extent=[xl_start, xl_end, il_start, il_end])
                 plt.colorbar(c, ax=ax, pad=0.01)
                 plt.grid(False)
@@ -57,29 +57,7 @@ class Funcs():
             return data_cube, il, xl, t
         else:
             return None, None, None, None
-    def open_reg_inv_parameter_window(self):
-            parameter_window = Toplevel(self.root)
-            parameter_window.title("Regularized Inversion Parameters")
 
-            # Create labels and entry widgets for parameter input
-            niter_label = Label(parameter_window, text="Number of iterations:")
-            niter_label.grid(row=0, column=0)
-            self.niter_entry = Entry(parameter_window)
-            self.niter_entry.grid(row=0, column=1)
-
-            epsI_label = Label(parameter_window, text="Damping (epsI):")
-            epsI_label.grid(row=1, column=0)
-            self.epsI_entry = Entry(parameter_window)
-            self.epsI_entry.grid(row=1, column=1)
-
-            epsR_label = Label(parameter_window, text="Spatial regularization (epsR):")
-            epsR_label.grid(row=2, column=0)
-            self.epsR_entry = Entry(parameter_window)
-            self.epsR_entry.grid(row=2, column=1)
-
-            # Button to execute the reg_inv function with provided parameters
-            run_button = Button(parameter_window, text="Run Inversion", command=self.reg_inv)
-            run_button.grid(row=3, columnspan=2)
 
     def open_parameter_window(self):
         parameter_window = Toplevel(self.root)
@@ -371,7 +349,7 @@ class Application(Funcs):
 
     def tela_load(self):
         self.root.title("File Loader")
-        self.root.configure(background='DarkTurquoise')
+        self.root.configure(background="#4281A4")
         self.root.geometry("600x400")
         self.root.resizable(True, True)
     def frames(self):
