@@ -152,7 +152,6 @@ class Funcs():
         epsI_entry = Entry(inv_param_win)
         epsI_entry.grid(row=0, column=1)
 
-
         run_inv_button = Button(inv_param_win, text="Run inversion", command= self.run_inversion)
         run_inv_button.grid(row=1,column=1)
             
@@ -192,6 +191,7 @@ class Funcs():
         global niter_out_b_entry, niter_in_b_entry, mu_b_entry, epsI_b_entry, epsR_b_entry, epsRL1_b_entry
         inv_param_win = Toplevel(self.root)
         inv_param_win.title("Parameter Input")
+        
         # Create labels and entry widgets for parameter input
         niter_out_label = Label(inv_param_win, text="Number of outer loop iterations:")
         niter_out_label.grid(row=0, column=0)
