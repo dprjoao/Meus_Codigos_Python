@@ -4,6 +4,9 @@ import segyio
 import numpy as np
 import matplotlib.pyplot as plt
 import pylops
+import sys
+import matplotlib
+matplotlib.use('TkAgg')
 
 #Global variables
 t = None
@@ -17,8 +20,12 @@ tmax = None
 epsI_entry = None
 
 #Get the path to assets folder(images and logos)
-OUTPUT_PATH = Path(__file__).parent
-ASSETS_PATH = OUTPUT_PATH / Path(r"C:\Users\DELL\Documents\GitHub\Tkinter-Designer\build\assets\frame0")
+# Find the root directory
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+#Assets folder
+FOLDER = "assets/frame0"
+# Path to asset files for this GUI window.
+ASSETS_PATH = Path(__file__).resolve().parent / FOLDER
 
 #Python object with computing methods
 class Funcs():
