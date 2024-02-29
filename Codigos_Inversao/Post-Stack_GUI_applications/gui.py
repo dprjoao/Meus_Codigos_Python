@@ -1,11 +1,12 @@
-from pathlib import Path
 from tkinter import Tk, Canvas, Entry, Text, Button, PhotoImage, filedialog, Label, Frame, Toplevel, IntVar, Radiobutton
 import segyio
 import numpy as np
 import matplotlib.pyplot as plt
 import pylops
+import os
 import sys
 import matplotlib
+from matplotlib.widgets import RangeSlider
 matplotlib.use('TkAgg')
 
 #Global variables
@@ -19,19 +20,17 @@ tmin = None
 tmax = None 
 epsI_entry = None
 
-#Get the path to assets folder(images and logos)
-# Find the root directory
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-#Assets folder
-FOLDER = "assets/frame0"
-# Path to asset files for this GUI window.
-ASSETS_PATH = Path(__file__).resolve().parent / FOLDER
+# Get the path of the executable
+executable_path = sys.argv[0]
+
+# Navigate one directory up
+parent_directory = os.path.dirname(executable_path)
+
+#Join with "assets" folder
+ASSETS_PATH = os.path.join(parent_directory, "assets")
 
 #Python object with computing methods
-class Funcs():
-    #Path to assets plus the file name itself
-    def relative_to_assets(self, path: str) -> Path:
-        return ASSETS_PATH / Path(path)     
+class Funcs():    
     #Data Loading
     def load_file(self):
         global t, data_cube, il, xl
@@ -40,6 +39,7 @@ class Funcs():
             with segyio.open(filename, iline=189, xline=193) as stack:
                     ils, xls, twt = stack.ilines, stack.xlines, stack.samples
                     data_cube = segyio.cube(stack)
+                    data_cube[np.isnan(data_cube)] = 0.0
                     n_traces = stack.tracecount 
                     tr = stack.attributes(segyio.TraceField.TraceNumber)[-1]
                     if not isinstance(tr, int):
@@ -64,7 +64,7 @@ class Funcs():
                         data_type = 'Post-stack 2D'
                 if data_type == 'Post-stack 3D':
                     fig, ax = plt.subplots(1, 1, figsize=(10, 5))
-                    c = ax.imshow(data_cube[..., int(4000/dt)], aspect='auto', cmap='gray_r', vmin=-0.1*data_cube.max(), vmax=0.1*data_cube.max(),
+                    c = ax.imshow(data_cube[..., int(4000/dt)], aspect='auto', cmap='gray_r', vmin = 0.1*data_cube[..., int(4000/dt)].min(), vmax = 0.1*data_cube[..., int(4000/dt)].max(),
                                 extent=[xl_start, xl_end, il_start, il_end])
                     plt.colorbar(c, ax=ax, pad=0.01)
                     plt.grid(False)
@@ -84,13 +84,47 @@ class Funcs():
             il_start= il[0]
             xl_start, xl_end = xl[0], xl[-1]
             dt = t[1] - t[0]
+            fig, axs = plt.subplots(1, 2, figsize=(10, 5))
+            fig.subplots_adjust(bottom=0.25)
 
-            fig, ax = plt.subplots(1, 1, figsize=(10, 5))
-            c = ax.imshow(data_cube[il_number - il_start, :, :].T, aspect='auto', cmap='gray_r', vmin=-0.1*data_cube.max(), vmax=0.1*data_cube.max(),
+            im = axs[0].imshow(data_cube[il_number - il_start, :, :].T, aspect='auto', cmap='gray_r', vmin = 0.1*data_cube[il_number - il_start, :, :].min(), vmax = 0.1*data_cube[il_number - il_start, :, :].max(),
                             extent=[xl_start, xl_end, t[-1], t[0]])
-            plt.colorbar(c, ax=ax, pad=0.01)
-            plt.grid(False)
-            plt.show()                  
+            axs[1].hist(data_cube[:,0:300,:].T.flatten(), bins='auto')
+            axs[1].set_title('Histogram of pixel intensities')
+
+            # Create the RangeSlider
+            slider_ax = fig.add_axes([0.20, 0.1, 0.60, 0.03])
+            slider = RangeSlider(slider_ax, "Threshold", data_cube.min(), data_cube.max())
+
+            # Create the Vertical lines on the histogram
+            lower_limit_line = axs[1].axvline(slider.val[0], color='k')
+            upper_limit_line = axs[1].axvline(slider.val[1], color='k')
+
+
+            def update(val):
+                # The val passed to a callback by the RangeSlider will
+                # be a tuple of (min, max)
+
+                # Update the image's colormap
+                im.norm.vmin = val[0]
+                im.norm.vmax = val[1]
+
+                # Update the position of the vertical lines
+                lower_limit_line.set_xdata([val[0], val[0]])
+                upper_limit_line.set_xdata([val[1], val[1]])
+
+                # Redraw the figure to ensure it updates
+                fig.canvas.draw_idle()
+
+
+            slider.on_changed(update)
+            plt.show()
+            #fig, ax = plt.subplots(1, 1, figsize=(10, 5))
+            #c = ax.imshow(data_cube[il_number - il_start, :, :].T, aspect='auto', cmap='gray_r', vmin = 0.1*data_cube[il_number - il_start, :, :].min(), vmax = 0.1*data_cube[il_number - il_start, :, :].max(),
+            #                extent=[xl_start, xl_end, t[-1], t[0]])
+            #plt.colorbar(c, ax=ax, pad=0.01)
+            #plt.grid(False)
+            #plt.show()                  
             return il_number
         except ValueError:
             self.status_label.config(text="Error: Please enter valid IL number.")
@@ -133,7 +167,7 @@ class Funcs():
         wav_est = np.concatenate((np.flipud(wav_est[1:]), wav_est), axis=0)
         wav_est = wav_est / wav_est.max()
         fig, ax = plt.subplots(1, 1, figsize=(10, 5))
-        c = plt.imshow(data_cube[il_number - il[0], :, int(self.tmin/dt):int(self.tmax/dt)].T, aspect='auto', cmap='gray_r', vmin=-0.1*data_cube.max(), vmax=0.1*data_cube.max(),
+        c = plt.imshow(data_cube[il_number - il[0], :, int(self.tmin/dt):int(self.tmax/dt)].T, aspect='auto', cmap='gray_r', vmin = 0.1*data_cube[il_number - il[0], :, int(self.tmin/dt):int(self.tmax/dt)].T.min(), vmax = 0.1*data_cube[il_number - il[0], :, int(self.tmin/dt):int(self.tmax/dt)].T .max(),
                             extent=[xl[0], xl[-1], t[int(self.tmax/dt)], t[int(self.tmin/dt)]])
         plt.colorbar(c, ax=ax, pad=0.01)
         ax.set_title('Interval section')
@@ -247,20 +281,20 @@ class Funcs():
         il_start = il[0]
         xl_start, xl_end = xl[0], xl[-1]
         dt = t[1] - t[0]
-        d_small = data_cube[il_number - il_start, :, int(self.tmin/dt):int(self.tmax/dt)]
+        d_small = data_cube[il_number - il_start, :, int(self.tmin/dt) : int(self.tmax/dt)]
         d_small = np.swapaxes(d_small, -1, 0)
             
         print("\n -------------Running trace-by-trace inversion------------- \n")
             
-        m_tbt, r_tbt = pylops.avo.poststack.PoststackInversion(d_small, wav_est/2, m0=np.zeros_like(d_small), explicit=True,
-                                                                        epsI=epsI, simultaneous=False)
+        m_tbt, r_tbt = pylops.avo.poststack.PoststackInversion(d_small, wav_est/2, m0 = np.zeros_like(d_small), explicit=True,
+                                                                        epsI = epsI, simultaneous = False)
         m_tbt = np.swapaxes(m_tbt, 0, -1)
         r_tbt = np.swapaxes(r_tbt, 0, -1)
         d_small = np.swapaxes(d_small, 0, -1)
 
         fig, ax = plt.subplots(1, 1, figsize=(10, 5))
-        c = ax.imshow(m_tbt.T, aspect='auto', cmap='seismic', vmin=-0.1*m_tbt.max(), vmax=0.1*m_tbt.max(),
-                        extent=[xl_start, xl_end, t[int(self.tmax/dt)], t[int(self.tmin/dt)]])
+        c = ax.imshow(m_tbt.T, aspect='auto', cmap='seismic', vmin = m_tbt.min(), vmax= m_tbt.max(),
+                        extent = [xl_start, xl_end, t[int(self.tmax/dt)], t[int(self.tmin/dt)]])
         plt.colorbar(c, ax=ax, pad=0.01)
         plt.grid(False)
         plt.show()
@@ -285,7 +319,7 @@ class Funcs():
             m0 = m_tbt.T
             
         m_relative_reg, r_relative_reg = \
-            pylops.avo.poststack.PoststackInversion(d_small, wav_est/2, m0=m0, epsI=epsI_sr, epsR=epsR_sr, 
+            pylops.avo.poststack.PoststackInversion(d_small, wav_est/2, m0 = m0, epsI = epsI_sr, epsR = epsR_sr, 
                                                 **dict(iter_lim=niter_sr, show=2))
 
         m_relative_reg = np.swapaxes(m_relative_reg, 0, -1)
@@ -293,7 +327,7 @@ class Funcs():
         d_small = np.swapaxes(d_small, 0, -1)
 
         fig, ax = plt.subplots(1, 1, figsize=(10, 5))
-        c = ax.imshow(m_relative_reg.T, aspect='auto', cmap='seismic', vmin=-0.1*m_relative_reg.max(), vmax=0.1*m_relative_reg.max(),
+        c = ax.imshow(m_relative_reg.T, aspect='auto', cmap='seismic', vmin = m_relative_reg.min(), vmax = m_relative_reg.max(),
                     extent=[xl_start, xl_end, t[int(self.tmax/dt)], t[int(self.tmin/dt)]])
         plt.colorbar(c, ax=ax, pad=0.01)
         plt.grid(False)
@@ -311,24 +345,24 @@ class Funcs():
         il_start = il[0]
         xl_start, xl_end = xl[0], xl[-1]
         dt = t[1] - t[0]
-        d_small = data_cube[il_number - il_start, :, int(self.tmin/dt):int(self.tmax/dt)]
+        d_small = data_cube[il_number - il_start, :, int(self.tmin/dt) : int(self.tmax/dt)]
         d_small = np.swapaxes(d_small, -1, 0)
 
         print("\n -------------Running spatially regularized blocky promoting simultaneous inversion------------- \n")
             
         m_blocky, r_blocky = \
-            pylops.avo.poststack.PoststackInversion(d_small, wav_est/2, m0=np.zeros_like(d_small), explicit=False, 
-                                                        epsR=epsR_b, epsRL1=epsRL1_b,
-                                                        **dict(mu=mu_b, niter_outer=niter_out_b, 
-                                                            niter_inner=niter_in_b, show=True,
-                                                            iter_lim=niter_b, damp=epsI_b))
+            pylops.avo.poststack.PoststackInversion(d_small, wav_est/2, m0 = np.zeros_like(d_small), explicit = False, 
+                                                        epsR = epsR_b, epsRL1 = epsRL1_b,
+                                                        **dict(mu = mu_b, niter_outer = niter_out_b, 
+                                                            niter_inner = niter_in_b, show = True,
+                                                            iter_lim = niter_b, damp = epsI_b))
         m_blocky = np.swapaxes(m_blocky, 0, -1)
         r_blocky = np.swapaxes(r_blocky, 0, -1)
         d_small = np.swapaxes(d_small, 0, -1)
             
         fig, ax = plt.subplots(1, 1, figsize=(10, 5))
-        c = ax.imshow(m_blocky.T, aspect='auto', cmap='seismic', vmin=-0.1*m_blocky.max(), vmax=0.1*m_blocky.max(),
-                extent=[xl_start, xl_end, t[int(self.tmax/dt)], t[int(self.tmin/dt)]])
+        c = ax.imshow(m_blocky.T, aspect='auto', cmap='seismic', vmin = m_blocky.min(), vmax = m_blocky.max(),
+                extent = [xl_start, xl_end, t[int(self.tmax/dt)], t[int(self.tmin/dt)]])
         plt.colorbar(c, ax=ax, pad=0.01)
         plt.grid(False)
         plt.show()
@@ -397,7 +431,7 @@ class Application(Funcs):
             height=24.0
         )
         self.button_image_disp = PhotoImage(
-            file=self.relative_to_assets("button_disp.png"))
+            file=os.path.join(ASSETS_PATH,"button_disp.png"))
         button_disp = Button(
             image=self.button_image_disp,
             borderwidth=0,
@@ -412,7 +446,7 @@ class Application(Funcs):
             height=24.0
         )
         self.button_image_load = PhotoImage(
-            file=self.relative_to_assets("button_load.png"))
+            file=os.path.join(ASSETS_PATH, "button_load.png"))
         self.button_load = Button(
             image=self.button_image_load,
             borderwidth=0,
@@ -427,7 +461,7 @@ class Application(Funcs):
             height=24.0
         )
         self.button_image_wav = PhotoImage(
-            file=self.relative_to_assets("button_wvl.png"))
+            file=os.path.join(ASSETS_PATH, "button_wvl.png"))
         button_wav = Button(
             image=self.button_image_wav,
             borderwidth=0,
@@ -442,7 +476,7 @@ class Application(Funcs):
             height=24.0
         )
         self.button_image_close = PhotoImage(
-            file=self.relative_to_assets("button_close.png"))
+            file=os.path.join(ASSETS_PATH, "button_close.png"))
         button_close = Button(
             image=self.button_image_close,
             borderwidth=0,
@@ -457,7 +491,7 @@ class Application(Funcs):
             height=24.0
         )
         self.image_logo = PhotoImage(
-            file=self.relative_to_assets("image_1.png"))
+            file=os.path.join(ASSETS_PATH,"image_1.png"))
         image_1 = self.canvas.create_image(
             470.0,
             50.0,
@@ -467,7 +501,7 @@ class Application(Funcs):
         self.inv_type = IntVar(self.root)
         self.inv_type.set(1)  # Default to Blocky Inversion
         self.blocky_inv_img = PhotoImage(
-                        file=self.relative_to_assets("blocky.png"))
+                        file=os.path.join(ASSETS_PATH,"blocky.png"))
         blocky_radio = Radiobutton(self.root,
                                 image=self.blocky_inv_img,
                                 text="Blocky Inversion", 
@@ -479,7 +513,7 @@ class Application(Funcs):
         blocky_radio.place(x=400, 
                         y=120)
         self.reg_spt_img = PhotoImage(
-                        file=self.relative_to_assets("reg.png"))
+                        file=os.path.join(ASSETS_PATH, "reg.png"))
         reg_spatial_radio = Radiobutton(self.root,
                                         image=self.reg_spt_img, 
                                         text="Regularized Spatial Inversion", 
@@ -490,7 +524,7 @@ class Application(Funcs):
         reg_spatial_radio.place(x=400, 
                                 y=150)
         self.tbt_img = PhotoImage(
-                        file=self.relative_to_assets("tbt.png"))
+                        file=os.path.join(ASSETS_PATH,"tbt.png"))
         reg_radio = Radiobutton(self.root,
                                 image=self.tbt_img,
                                 text="Trace-by-trace Inversion", 
@@ -512,7 +546,7 @@ class Application(Funcs):
         self.status_label.place(x=25.0,
                             y=220)
         self.run_button_img  = PhotoImage(
-                        file=self.relative_to_assets("run_inv.png"))
+                        file=os.path.join(ASSETS_PATH, "run_inv.png"))
         #Run inversion button
         run_button = Button(self.root, 
                             image=self.run_button_img,
