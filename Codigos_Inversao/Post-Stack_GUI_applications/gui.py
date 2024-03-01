@@ -64,12 +64,62 @@ class Funcs():
                     else:
                         data_type = 'Post-stack 2D'
                 if data_type == 'Post-stack 3D':
-                    fig, ax = plt.subplots(1, 1, figsize=(10, 5))
+                    fig_slc = plt.figure(figsize=(10, 6))
+            
+                    #fig.subplots_adjust(bottom=0.25)
+                    gs = GridSpec(2, 2, height_ratios=(10,1))
+
+                    ax_seismic = fig_slc.add_subplot(gs[:1,:])
+                    ax_histogram = fig_slc.add_subplot(gs[-1,0])         
+                    plt.subplots_adjust(left=0.098, right=1, top=0.955, bottom=0.112,hspace=0.25)
+                    im = ax_seismic.imshow(data_cube[..., int(4000/dt)], aspect='auto', 
+                                           cmap='gray_r', vmin = 0.1*data_cube[..., int(4000/dt)].min(), 
+                                           vmax = 0.1*data_cube[..., int(4000/dt)].max(),
+                                extent=[xl_start, xl_end, il_start, il_end])
+                    
+                    ax_histogram.hist(data_cube[..., int(4000/dt)].T.flatten(), bins = 400)
+                    ax_histogram.set_title('Histogram of pixel intensities')
+                    plt.colorbar(im, ax=ax_seismic)
+                    # Create the RangeSlider
+                    # Add slider for interactive frame navigation along inline direction
+                    axframe1 = plt.axes([0.1, 0.01, 0.5, 0.03], facecolor='lightgoldenrodyellow')
+                    #slider_ax = fig.add_axes([0.20, 0.1, 0.60, 0.03])
+                    slider = RangeSlider(axframe1, "Threshold",
+                                        -0.1*data_cube[..., int(4000/dt)].max(), 
+                                         0.1*data_cube[..., int(4000/dt)].max())
+
+                    # Create the Vertical lines on the histogram
+                    lower_limit_line = ax_histogram.axvline(slider.val[0], color='k')
+                    upper_limit_line = ax_histogram.axvline(slider.val[1], color='k')
+
+
+                    def update_slc(val):
+                        # The val passed to a callback by the RangeSlider will
+                        # be a tuple of (min, max)
+
+                        # Update the image's colormap
+                        im.norm.vmin = val[0]
+                        im.norm.vmax = val[1]
+
+                        # Update the position of the vertical lines
+                        lower_limit_line.set_xdata([val[0], val[0]])
+                        upper_limit_line.set_xdata([val[1], val[1]])
+
+                        # Redraw the figure to ensure it updates
+                        fig_slc.canvas.draw_idle()
+
+
+                    slider.on_changed(update_slc)
+                    plt.grid(False)
+                    plt.show()    
+
+                    '''fig, ax = plt.subplots(1, 1, figsize=(10, 5))
                     c = ax.imshow(data_cube[..., int(4000/dt)], aspect='auto', cmap='gray_r', vmin = 0.1*data_cube[..., int(4000/dt)].min(), vmax = 0.1*data_cube[..., int(4000/dt)].max(),
                                 extent=[xl_start, xl_end, il_start, il_end])
                     plt.colorbar(c, ax=ax, pad=0.01)
                     plt.grid(False)
-                    plt.show()
+                    plt.show()'''
+
                 else:
                     pass           
                 return data_cube, il, xl, t
@@ -86,16 +136,19 @@ class Funcs():
             il_start= il[0]
             xl_start, xl_end = xl[0], xl[-1]
             dt = t[1] - t[0]
-            fig = plt.figure(figsize=(10, 6))
+            fig_il = plt.figure(figsize=(10, 6))
             
             #fig.subplots_adjust(bottom=0.25)
             gs = GridSpec(2, 2, height_ratios=(10,1))
 
-            ax_seismic = fig.add_subplot(gs[:1,:])
-            ax_histogram = fig.add_subplot(gs[-1,0])         
+            ax_seismic = fig_il.add_subplot(gs[:1,:])
+            ax_histogram = fig_il.add_subplot(gs[-1,0])         
             plt.subplots_adjust(left=0.098, right=1, top=0.955, bottom=0.112,hspace=0.25)
-            im = ax_seismic.imshow(data_cube[il_number - il_start, :, :].T, aspect='auto', cmap='gray_r', vmin = 0.1*data_cube[il_number - il_start, :, :].min(), vmax = 0.1*data_cube[il_number - il_start, :, :].max(),
+            im = ax_seismic.imshow(data_cube[il_number - il_start, :, :].T, aspect='auto', cmap='gray_r', 
+                                   vmin = 0.1*data_cube[il_number - il_start, :, :].min(), 
+                                   vmax = 0.1*data_cube[il_number - il_start, :, :].max(),
                             extent=[xl_start, xl_end, t[-1], t[0]])
+            
             ax_histogram.hist(data_cube[:,0:300,:].T.flatten(), bins = 400)
             ax_histogram.set_title('Histogram of pixel intensities')
             plt.colorbar(im, ax=ax_seismic)
@@ -103,14 +156,14 @@ class Funcs():
             # Add slider for interactive frame navigation along inline direction
             axframe1 = plt.axes([0.1, 0.01, 0.5, 0.03], facecolor='lightgoldenrodyellow')
             #slider_ax = fig.add_axes([0.20, 0.1, 0.60, 0.03])
-            slider = RangeSlider(axframe1, "Threshold", -0.1*data_cube.max(), 0.1*data_cube.max())
+            slider = RangeSlider(axframe1, "Threshold", -0.1*data_cube[il_number - il_start, :, :].max(), 0.1*data_cube[il_number - il_start, :, :].max())
 
             # Create the Vertical lines on the histogram
             lower_limit_line = ax_histogram.axvline(slider.val[0], color='k')
             upper_limit_line = ax_histogram.axvline(slider.val[1], color='k')
 
 
-            def update(val):
+            def update_il(val):
                 # The val passed to a callback by the RangeSlider will
                 # be a tuple of (min, max)
 
@@ -123,10 +176,10 @@ class Funcs():
                 upper_limit_line.set_xdata([val[1], val[1]])
 
                 # Redraw the figure to ensure it updates
-                fig.canvas.draw_idle()
+                fig_il.canvas.draw_idle()
 
 
-            slider.on_changed(update)
+            slider.on_changed(update_il)
             plt.grid(False)
             plt.show()
             #fig, ax = plt.subplots(1, 1, figsize=(10, 5))
@@ -176,22 +229,63 @@ class Funcs():
         wav_est = np.real(np.fft.ifft(wav_est_fft)[:nt_wav])
         wav_est = np.concatenate((np.flipud(wav_est[1:]), wav_est), axis=0)
         wav_est = wav_est / wav_est.max()
-        fig, ax = plt.subplots(1, 1, figsize=(10, 5))
+        
+        '''fig, ax = plt.subplots(1, 1, figsize=(10, 5))
         c = plt.imshow(data_cube[il_number - il[0], :, int(self.tmin/dt):int(self.tmax/dt)].T, aspect='auto', cmap='gray_r', vmin = 0.1*data_cube[il_number - il[0], :, int(self.tmin/dt):int(self.tmax/dt)].T.min(), vmax = 0.1*data_cube[il_number - il[0], :, int(self.tmin/dt):int(self.tmax/dt)].T .max(),
                             extent=[xl[0], xl[-1], t[int(self.tmax/dt)], t[int(self.tmin/dt)]])
         plt.colorbar(c, ax=ax, pad=0.01)
         ax.set_title('Interval section')
-        plt.grid(False)
-        # display wavelet
-        fig, axs = plt.subplots(1, 2, figsize=(10, 5))
-        fig.suptitle('Statistical wavelet estimate')
+        plt.grid(False)'''
+
+        fig_sect = plt.figure(figsize=(10, 5))
+        gs = GridSpec(2, 2, height_ratios=(10,1))
+        ax_seismic = fig_sect.add_subplot(gs[:1,:])
+        ax_histogram = fig_sect.add_subplot(gs[-1,0])  
+        plt.subplots_adjust(left=0.098, right=1, top=0.955, bottom=0.112,hspace=0.25)            
+        im = ax_seismic.imshow(data_cube[il_number - il[0], :, int(self.tmin/dt):int(self.tmax/dt)].T,
+                                aspect='auto', cmap='gray_r',
+                                vmin = 0.1*data_cube[il_number - il[0], :, int(self.tmin/dt):int(self.tmax/dt)].T.min(),
+                                vmax = 0.1*data_cube[il_number - il[0], :, int(self.tmin/dt):int(self.tmax/dt)].T.max(),
+                            extent=[xl[0], xl[-1], t[int(self.tmax/dt)], t[int(self.tmin/dt)]])
+        ax_histogram.hist(data_cube[il_number - il[0], :, int(self.tmin/dt):int(self.tmax/dt)].T.flatten(), bins = 400)
+        ax_histogram.set_title('Histogram of pixel intensities')
+        plt.colorbar(im, ax=ax_seismic)
+        # Create the RangeSlider
+        # Add slider for interactive frame navigation along inline direction
+        axframe1 = plt.axes([0.1, 0.01, 0.5, 0.03], facecolor='lightgoldenrodyellow')
+        #slider_ax = fig.add_axes([0.20, 0.1, 0.60, 0.03])
+        slider = RangeSlider(axframe1, "Threshold", data_cube[il_number - il[0], :, int(self.tmin/dt):int(self.tmax/dt)].min(),
+                            data_cube[il_number - il[0], :, int(self.tmin/dt):int(self.tmax/dt)].max())
+        # Create the Vertical lines on the histogram
+        lower_limit_line = ax_histogram.axvline(slider.val[0], color='k')
+        upper_limit_line = ax_histogram.axvline(slider.val[1], color='k')
+
+        #display wavelet
+        fig2, axs = plt.subplots(1, 2, figsize=(10, 5))
+        fig2.suptitle('Statistical wavelet estimate')
         axs[0].plot(fwest[:nfft//2], wav_est_fft[:nfft//2], 'k')
         axs[0].set_title('Frequency')
         axs[1].plot(wav_est, 'k')
         axs[1].set_title('Time')
         plt.tight_layout()
         plt.subplots_adjust(wspace=0.22)
-        plt.show();
+        plt.grid(False)
+        def update(val):
+            # The val passed to a callback by the RangeSlider will
+            # be a tuple of (min, max)
+
+            # Update the image's colormap
+            im.norm.vmin = val[0]
+            im.norm.vmax = val[1]
+
+            # Update the position of the vertical lines
+            lower_limit_line.set_xdata([val[0], val[0]])
+            upper_limit_line.set_xdata([val[1], val[1]])
+
+            # Redraw the figure to ensure it updates
+            fig_sect.canvas.draw_idle()
+        slider.on_changed(update)
+        plt.show()
     # Trace-by-trace inversion parameter window
     def tbt_inv_param_win(self):
         global epsI_entry
@@ -309,15 +403,15 @@ class Funcs():
         plt.grid(False)
         plt.show()'''
 
-        fig = plt.figure(figsize=(10, 5))
+        fig_tbt = plt.figure(figsize=(10, 5))
         #fig.subplots_adjust(bottom=0.25)
         gs = GridSpec(2, 2, height_ratios=(10,1))
 
-        ax_seismic = fig.add_subplot(gs[:1,:])
-        ax_histogram = fig.add_subplot(gs[-1,0])  
+        ax_seismic = fig_tbt.add_subplot(gs[:1,:])
+        ax_histogram = fig_tbt.add_subplot(gs[-1,0])  
         plt.subplots_adjust(left=0.098, right=1, top=0.955, bottom=0.112,hspace=0.25)            
         im = ax_seismic.imshow(m_tbt.T, aspect='auto', cmap='seismic', vmin = 0.1*m_tbt.min(), vmax = 0.1*m_tbt.max(),
-                            extent=[xl_start, xl_end, t[-1], t[0]])
+                            extent=[xl_start, xl_end, t[int(self.tmax/dt)], t[int(self.tmin/dt)]])
         ax_histogram.hist(m_tbt[0:300,:].T.flatten(), bins = 400)
         ax_histogram.set_title('Histogram of pixel intensities')
         plt.colorbar(im, ax=ax_seismic)
@@ -345,13 +439,12 @@ class Funcs():
             upper_limit_line.set_xdata([val[1], val[1]])
 
             # Redraw the figure to ensure it updates
-            fig.canvas.draw_idle()
+            fig_tbt.canvas.draw_idle()
 
 
         slider.on_changed(update)
         plt.grid(False)
         plt.show()
-
 
         return m_tbt
     # Method for spat reg post-stack inversion
@@ -395,7 +488,7 @@ class Funcs():
         ax_histogram = fig.add_subplot(gs[-1,0])  
         plt.subplots_adjust(left=0.098, right=1, top=0.955, bottom=0.112,hspace=0.25)            
         im = ax_seismic.imshow(m_relative_reg.T, aspect='auto', cmap='seismic', vmin = 0.1*m_relative_reg.min(), vmax = 0.1*m_relative_reg.max(),
-                            extent=[xl_start, xl_end, t[-1], t[0]])
+                            extent=[xl_start, xl_end, t[int(self.tmax/dt)], t[int(self.tmin/dt)]])
         ax_histogram.hist(m_tbt[0:300,:].T.flatten(), bins = 400)
         ax_histogram.set_title('Histogram of pixel intensities')
         plt.colorbar(im, ax=ax_seismic)
@@ -475,7 +568,7 @@ class Funcs():
         ax_histogram = fig.add_subplot(gs[-1,0])  
         plt.subplots_adjust(left=0.098, right=1, top=0.955, bottom=0.112,hspace=0.25)            
         im = ax_seismic.imshow(m_blocky.T, aspect='auto', cmap='seismic', vmin = 0.1*m_blocky.min(), vmax = 0.1*m_blocky.max(),
-                            extent=[xl_start, xl_end, t[-1], t[0]])
+                            extent=[xl_start, xl_end, t[int(self.tmax/dt)], t[int(self.tmin/dt)]])
         ax_histogram.hist(m_blocky[0:300,:].T.flatten(), bins = 400)
         ax_histogram.set_title('Histogram of pixel intensities')
         plt.colorbar(im, ax=ax_seismic)
