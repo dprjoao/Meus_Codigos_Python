@@ -28,7 +28,7 @@ executable_path = sys.argv[0]
 parent_directory = os.path.dirname(executable_path)
 
 #Join with "assets" folder
-ASSETS_PATH = os.path.join(parent_directory, "assets")
+ASSETS_PATH = os.path.join(parent_directory, "assets/frame0")
 
 #Python object with computing methods
 class Funcs():    
@@ -106,13 +106,12 @@ class Funcs():
                         upper_limit_line.set_xdata([val[1], val[1]])
 
                         # Redraw the figure to ensure it updates
-                        fig_slc.canvas.draw_idle()
+                        #fig_slc.canvas.draw_idle()
 
 
                     slider.on_changed(update_slc)
                     plt.grid(False)
-                    plt.show()    
-
+                    plt.show()
                     '''fig, ax = plt.subplots(1, 1, figsize=(10, 5))
                     c = ax.imshow(data_cube[..., int(4000/dt)], aspect='auto', cmap='gray_r', vmin = 0.1*data_cube[..., int(4000/dt)].min(), vmax = 0.1*data_cube[..., int(4000/dt)].max(),
                                 extent=[xl_start, xl_end, il_start, il_end])
@@ -176,7 +175,7 @@ class Funcs():
                 upper_limit_line.set_xdata([val[1], val[1]])
 
                 # Redraw the figure to ensure it updates
-                fig_il.canvas.draw_idle()
+                #fig_il.canvas.draw_idle()
 
 
             slider.on_changed(update_il)
@@ -187,7 +186,6 @@ class Funcs():
             #                extent=[xl_start, xl_end, t[-1], t[0]])
             #plt.colorbar(c, ax=ax, pad=0.01)
             #plt.grid(False)
-            #plt.show()                  
             return il_number
         except ValueError:
             self.status_label.config(text="Error: Please enter valid IL number.")
@@ -283,7 +281,7 @@ class Funcs():
             upper_limit_line.set_xdata([val[1], val[1]])
 
             # Redraw the figure to ensure it updates
-            fig_sect.canvas.draw_idle()
+            #fig_sect.canvas.draw_idle()
         slider.on_changed(update)
         plt.show()
     # Trace-by-trace inversion parameter window
@@ -439,7 +437,7 @@ class Funcs():
             upper_limit_line.set_xdata([val[1], val[1]])
 
             # Redraw the figure to ensure it updates
-            fig_tbt.canvas.draw_idle()
+            #fig_tbt.canvas.draw_idle()
 
 
         slider.on_changed(update)
@@ -516,7 +514,7 @@ class Funcs():
             upper_limit_line.set_xdata([val[1], val[1]])
 
             # Redraw the figure to ensure it updates
-            fig.canvas.draw_idle()
+            #fig.canvas.draw_idle()
 
 
         slider.on_changed(update)
@@ -596,7 +594,7 @@ class Funcs():
             upper_limit_line.set_xdata([val[1], val[1]])
 
             # Redraw the figure to ensure it updates
-            fig.canvas.draw_idle()
+            #fig.canvas.draw_idle()
 
 
         slider.on_changed(update)
@@ -799,3 +797,4 @@ class Application(Funcs):
                         height=24)
 #call aplication
 Application()
+
