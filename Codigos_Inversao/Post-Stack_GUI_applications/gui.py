@@ -221,26 +221,27 @@ class Funcs():
     # Method for inputing tied wavelet in .txt formatt
     def input_tied_wvlt(self):
         global wav_est, wavs, times
+        
         # Open file dialog to select multiple files
         wav_files = filedialog.askopenfilenames()
 
         wavs = []
         times = []
+        if wav_files:
+            for file in wav_files:
+                arr = pd.read_csv(file, skiprows=16, sep='\s+').to_numpy()
+                wavs.append(arr[:, 1] / np.max(abs(arr[:, 1])))
+                times.append(arr[:, 0])
 
-        for file in wav_files:
-            arr = pd.read_csv(file, skiprows=16, sep='\s+').to_numpy()
-            wavs.append(arr[:, 1] / np.max(abs(arr[:, 1])))
-            times.append(arr[:, 0])
+            wavs = np.array(wavs)
+            times = np.array(times)
 
-        wavs = np.array(wavs)
-        times = np.array(times)
-
-        # Example of plotting
-        import matplotlib.pyplot as plt
-        plt.figure(figsize=(4, 3))
-        for i in range(len(wavs)):
-            plt.plot(times[i], wavs[i])
-        plt.show() 
+            # Example of plotting
+            import matplotlib.pyplot as plt
+            plt.figure(figsize=(4, 3))
+            for i in range(len(wavs)):
+                plt.plot(times[i], wavs[i])
+            plt.show() 
 
     def compute_mean_wvlt(self):
         global wav_est
@@ -742,8 +743,11 @@ class Application(Funcs):
             height=24.0
         )
 
+        self.button_image_tied_wav = PhotoImage(
+            file=os.path.join(ASSETS_PATH, "button_tied_wvl.png"))
+        
         button_load_wav = Button(
-            text='Input wavelet from well-tie',
+            image = self.button_image_tied_wav,
             borderwidth=0,
             highlightthickness=0,
             command=self.input_tied_wvlt,
