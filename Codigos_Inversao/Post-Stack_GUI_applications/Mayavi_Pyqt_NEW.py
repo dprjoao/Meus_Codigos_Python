@@ -47,7 +47,7 @@ class MyApp(QWidget):
             with segyio.open(filename, iline=segyio.TraceField.INLINE_3D, xline=segyio.TraceField.CROSSLINE_3D) as stack:
                 ils, xls, twt = stack.ilines, stack.xlines, stack.samples
                 data_cube = segyio.cube(stack)
-                data_cube = data_cube[:,:,950:1500]
+                #data_cube = data_cube[:,:,950:1500]
         if filename:
             #data = np.load(filename)
             self.label.setText(f'SEG-Y File Selected: {filename}')
@@ -68,7 +68,9 @@ class SuccessDialog(QDialog):
         for axis in ['x', 'y', 'z']:
             plane = mlab.pipeline.image_plane_widget(source, 
                                             plane_orientation='{}_axes'.format(axis),
-                                            slice_index=100, colormap='gray')
+                                            slice_index=100, colormap='gray',
+                                            vmin = -0.1*data_cube.max(),
+                                            vmax = 0.1*data_cube.max())
             # Flip colormap. Better way to do this?
             plane.module_manager.scalar_lut_manager.reverse_lut = True
         mlab.axes(xlabel='Inline', ylabel='Crossline', zlabel='Depth', nb_labels=10) 

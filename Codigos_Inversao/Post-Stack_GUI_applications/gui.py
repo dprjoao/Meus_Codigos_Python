@@ -8,6 +8,7 @@ import sys
 import matplotlib
 from matplotlib.gridspec import GridSpec
 from matplotlib.widgets import RangeSlider
+import pandas as pd
 matplotlib.use('TkAgg')
 
 #Global variables
@@ -15,7 +16,9 @@ t = None
 il = None
 xl = None
 t = None
+dt = None
 wav_est = None
+wavs = None
 m_tbt = None
 tmin = None
 tmax = None 
@@ -34,7 +37,7 @@ ASSETS_PATH = os.path.join(parent_directory, "assets/frame0")
 class Funcs():    
     #Data Loading
     def load_file(self):
-        global t, data_cube, il, xl
+        global t, data_cube, il, xl, dt
         filename = filedialog.askopenfilename()
         if filename:
             with segyio.open(filename, iline=189, xline=193) as stack:
@@ -121,7 +124,7 @@ class Funcs():
 
                 else:
                     pass           
-                return data_cube, il, xl, t
+                return data_cube, il, xl, t, dt
             else:
                 return None, None, None, None
                 
@@ -134,7 +137,6 @@ class Funcs():
 
             il_start= il[0]
             xl_start, xl_end = xl[0], xl[-1]
-            dt = t[1] - t[0]
             fig_il = plt.figure(figsize=(10, 6))
             
             #fig.subplots_adjust(bottom=0.25)
@@ -207,21 +209,67 @@ class Funcs():
 
         self.tmax_entry = Entry(parameter_window)
         self.tmax_entry.grid(row=1, column=1)
+        if wavs is not None:
+            estimate_button = Button(parameter_window, text="Estimate Wavelet", command=self.compute_mean_wvlt)
+        else:
+            estimate_button = Button(parameter_window, text="Estimate Wavelet", command=self.estimate_wavelet)
 
-        estimate_button = Button(parameter_window, text="Estimate Wavelet", command=self.estimate_wavelet)
         estimate_button.grid(row=3,column=1)
             
         close_button = Button(parameter_window, text="Close", command= parameter_window.destroy)
         close_button.grid(row=4,column=1)
+    # Method for inputing tied wavelet in .txt formatt
+    def input_tied_wvlt(self):
+        global wav_est, wavs, times
+        # Open file dialog to select multiple files
+        wav_files = filedialog.askopenfilenames()
+
+        wavs = []
+        times = []
+
+        for file in wav_files:
+            arr = pd.read_csv(file, skiprows=16, sep='\s+').to_numpy()
+            wavs.append(arr[:, 1] / np.max(abs(arr[:, 1])))
+            times.append(arr[:, 0])
+
+        wavs = np.array(wavs)
+        times = np.array(times)
+
+        # Example of plotting
+        import matplotlib.pyplot as plt
+        plt.figure(figsize=(4, 3))
+        for i in range(len(wavs)):
+            plt.plot(times[i], wavs[i])
+        plt.show() 
+
+    def compute_mean_wvlt(self):
+        global wav_est
+        self.tmin = float(self.tmin_entry.get())
+        self.tmax = float(self.tmax_entry.get())
+        wav = np.mean(wavs, axis=0)
+        wav = wav / np.max(abs(wav))
+        wav_est = np.concatenate((wav[0:17], wav[0:14][::-1]), axis=0)
+
+        freqs = np.fft.rfftfreq(times.shape[1]-1, d=dt/1000)
+        a = np.fft.rfft(wav_est)
+        A = np.abs(a)
+
+        # display wavelet
+        fig, axs = plt.subplots(1, 2, figsize=(10, 5))
+        fig.suptitle('Statistical wavelet estimate')
+        axs[0].plot(freqs, A, 'k')
+        axs[0].set_title('Frequency')
+        axs[1].plot( wav_est, 'k')
+        axs[1].set_title('Time');
             
-    # Function for wavelet estimation
+        plt.show()        
+    # Method for wavelet estimation
     def estimate_wavelet(self):
         global data_cube, t, wav_est
         self.tmin = float(self.tmin_entry.get())
         self.tmax = float(self.tmax_entry.get())
         nt_wav = 16
         nfft = 2**8
-        dt = t[1] - t[0]
         wav_est_fft = np.mean(np.abs(np.fft.fft(data_cube[..., int(self.tmin/dt):int(self.tmax/dt)], nfft, axis=-1)), axis=(0, 1))
         fwest = np.fft.fftfreq(nfft, d=dt/1000)
         wav_est = np.real(np.fft.ifft(wav_est_fft)[:nt_wav])
@@ -382,7 +430,6 @@ class Funcs():
         epsI = float(epsI_entry.get())
         il_start = il[0]
         xl_start, xl_end = xl[0], xl[-1]
-        dt = t[1] - t[0]
         d_small = data_cube[il_number - il_start, :, int(self.tmin/dt) : int(self.tmax/dt)]
         d_small = np.swapaxes(d_small, -1, 0)
             
@@ -453,7 +500,6 @@ class Funcs():
 
         il_start = il[0]
         xl_start, xl_end = xl[0], xl[-1]
-        dt = t[1] - t[0]
         d_small = data_cube[il_number - il_start, :, int(self.tmin/dt):int(self.tmax/dt)]
         d_small = np.swapaxes(d_small, -1, 0)
 
@@ -535,7 +581,6 @@ class Funcs():
 
         il_start = il[0]
         xl_start, xl_end = xl[0], xl[-1]
-        dt = t[1] - t[0]
         d_small = data_cube[il_number - il_start, :, int(self.tmin/dt) : int(self.tmax/dt)]
         d_small = np.swapaxes(d_small, -1, 0)
 
@@ -696,6 +741,22 @@ class Application(Funcs):
             width=116.0,
             height=24.0
         )
+
+        button_load_wav = Button(
+            text='Input wavelet from well-tie',
+            borderwidth=0,
+            highlightthickness=0,
+            command=self.input_tied_wvlt,
+            relief="flat"
+        )
+
+        button_load_wav.place(
+            x=15.0,
+            y=52.0,
+            width=116.0,
+            height=24.0
+        )
+
         self.button_image_wav = PhotoImage(
             file=os.path.join(ASSETS_PATH, "button_wvl.png"))
         button_wav = Button(
@@ -707,7 +768,7 @@ class Application(Funcs):
         )
         button_wav.place(
             x=15.0,
-            y=52.0,
+            y=92.0,
             width=116.0,
             height=24.0
         )
@@ -722,7 +783,7 @@ class Application(Funcs):
         )
         button_close.place(
             x=15.0,
-            y=94.0,
+            y=132.0,
             width=116.0,
             height=24.0
         )
