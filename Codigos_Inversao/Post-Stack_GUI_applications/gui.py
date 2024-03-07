@@ -225,9 +225,10 @@ class Funcs():
         # Open file dialog to select multiple files
         wav_files = filedialog.askopenfilenames()
 
-        wavs = []
-        times = []
+
         if wav_files:
+            wavs = []
+            times = []
             for file in wav_files:
                 arr = pd.read_csv(file, skiprows=16, sep='\s+').to_numpy()
                 wavs.append(arr[:, 1] / np.max(abs(arr[:, 1])))
@@ -236,8 +237,6 @@ class Funcs():
             wavs = np.array(wavs)
             times = np.array(times)
 
-            # Example of plotting
-            import matplotlib.pyplot as plt
             plt.figure(figsize=(4, 3))
             for i in range(len(wavs)):
                 plt.plot(times[i], wavs[i])
@@ -247,6 +246,7 @@ class Funcs():
         global wav_est
         self.tmin = float(self.tmin_entry.get())
         self.tmax = float(self.tmax_entry.get())
+        
         wav = np.mean(wavs, axis=0)
         wav = wav / np.max(abs(wav))
         wav_est = np.concatenate((wav[0:17], wav[0:14][::-1]), axis=0)
@@ -255,6 +255,29 @@ class Funcs():
         a = np.fft.rfft(wav_est)
         A = np.abs(a)
 
+        fig_sect = plt.figure(figsize=(10, 5))
+        gs = GridSpec(2, 2, height_ratios=(10,1))
+        ax_seismic = fig_sect.add_subplot(gs[:1,:])
+        ax_histogram = fig_sect.add_subplot(gs[-1,0])  
+        plt.subplots_adjust(left=0.098, right=1, top=0.955, bottom=0.112,hspace=0.25)            
+        im = ax_seismic.imshow(data_cube[il_number - il[0], :, int(self.tmin/dt):int(self.tmax/dt)].T,
+                                aspect='auto', cmap='gray_r',
+                                vmin = 0.1*data_cube[il_number - il[0], :, int(self.tmin/dt):int(self.tmax/dt)].T.min(),
+                                vmax = 0.1*data_cube[il_number - il[0], :, int(self.tmin/dt):int(self.tmax/dt)].T.max(),
+                            extent=[xl[0], xl[-1], t[int(self.tmax/dt)], t[int(self.tmin/dt)]])
+        ax_histogram.hist(data_cube[il_number - il[0], :, int(self.tmin/dt):int(self.tmax/dt)].T.flatten(), bins = 400)
+        ax_histogram.set_title('Histogram of pixel intensities')
+        plt.colorbar(im, ax=ax_seismic)
+        # Create the RangeSlider
+        # Add slider for interactive frame navigation along inline direction
+        axframe1 = plt.axes([0.1, 0.01, 0.5, 0.03], facecolor='lightgoldenrodyellow')
+        #slider_ax = fig.add_axes([0.20, 0.1, 0.60, 0.03])
+        slider = RangeSlider(axframe1, "Threshold", data_cube[il_number - il[0], :, int(self.tmin/dt):int(self.tmax/dt)].min(),
+                            data_cube[il_number - il[0], :, int(self.tmin/dt):int(self.tmax/dt)].max())
+        # Create the Vertical lines on the histogram
+        lower_limit_line = ax_histogram.axvline(slider.val[0], color='k')
+        upper_limit_line = ax_histogram.axvline(slider.val[1], color='k')
+
         # display wavelet
         fig, axs = plt.subplots(1, 2, figsize=(10, 5))
         fig.suptitle('Statistical wavelet estimate')
@@ -262,8 +285,27 @@ class Funcs():
         axs[0].set_title('Frequency')
         axs[1].plot( wav_est, 'k')
         axs[1].set_title('Time');
-            
-        plt.show()        
+        
+        plt.tight_layout()
+        plt.subplots_adjust(wspace=0.22)
+        plt.grid(False)
+        def update(val):
+            # The val passed to a callback by the RangeSlider will
+            # be a tuple of (min, max)
+
+            # Update the image's colormap
+            im.norm.vmin = val[0]
+            im.norm.vmax = val[1]
+
+            # Update the position of the vertical lines
+            lower_limit_line.set_xdata([val[0], val[0]])
+            upper_limit_line.set_xdata([val[1], val[1]])
+
+            # Redraw the figure to ensure it updates
+            #fig_sect.canvas.draw_idle()
+        slider.on_changed(update)
+        plt.show()
+
     # Method for wavelet estimation
     def estimate_wavelet(self):
         global data_cube, t, wav_est
@@ -568,8 +610,6 @@ class Funcs():
         plt.grid(False)
         plt.show()
 
-
-
     # Method for blocky reg post-stack inversion
     def blocky_inv(self):
         niter_b = int(niter_in_b_entry.get())
@@ -743,11 +783,12 @@ class Application(Funcs):
             height=24.0
         )
 
-        self.button_image_tied_wav = PhotoImage(
-            file=os.path.join(ASSETS_PATH, "button_tied_wvl.png"))
+        '''self.button_image_tied_wav = PhotoImage(
+            file=os.path.join(ASSETS_PATH, "button_tied_wvl.png"))'''
         
         button_load_wav = Button(
-            image = self.button_image_tied_wav,
+            text = "tied wavelet",
+            #image = self.button_image_tied_wav,
             borderwidth=0,
             highlightthickness=0,
             command=self.input_tied_wvlt,
