@@ -783,11 +783,12 @@ class Application(Funcs):
             height=24.0
         )
 
-        self.button_image_tied_wav = PhotoImage(
-            file=os.path.join(ASSETS_PATH, "button_tied_wvl.png"))
+        '''self.button_image_tied_wav = PhotoImage(
+            file=os.path.join(ASSETS_PATH, "button_tied_wvl.png"))'''
         
         button_load_wav = Button(
-            image = self.button_image_tied_wav,
+            text = "tied wavelet",
+            #image = self.button_image_tied_wav,
             borderwidth=0,
             highlightthickness=0,
             command=self.input_tied_wvlt,
