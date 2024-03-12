@@ -353,7 +353,7 @@ class Funcs():
         close_button.grid(row=2,column=1)
         return epsI_entry
     # Spatially regularized inversion parameter window
-    def spat_inv_param_win(self):
+    def spat_inv_param_win(self, mode):
         global niter_sr_entry, epsI_sr_entry, epsR_sr_entry
         inv_param_win = Toplevel(self.root)
         inv_param_win.title("Parameter Input")
@@ -374,14 +374,14 @@ class Funcs():
         epsR_sr_entry = Entry(inv_param_win)
         epsR_sr_entry.grid(row=2, column=1)
 
-        run_inv_button = Button(inv_param_win, text="Run inversion", command=self.run_inversion())
+        run_inv_button = Button(inv_param_win, text="Run inversion", command = lambda: self.run_inversion(mode))
         run_inv_button.grid(row=3,column=1)
         
         close_button = Button(inv_param_win, text="Close", command= inv_param_win.destroy)
         close_button.grid(row=4,column=1)
         return niter_sr_entry, epsI_sr_entry, epsR_sr_entry
     # Blocky reg inv parameter window
-    def blocky_inv_param_win(self):
+    def blocky_inv_param_win(self, mode):
         global niter_out_b_entry, niter_in_b_entry, mu_b_entry, epsI_b_entry, epsR_b_entry, epsRL1_b_entry
         inv_param_win = Toplevel(self.root)
         inv_param_win.title("Parameter Input")
@@ -421,7 +421,7 @@ class Funcs():
         epsRL1_b_entry = Entry(inv_param_win)
         epsRL1_b_entry.grid(row=6, column=1)
 
-        run_inv_button = Button(inv_param_win, text="Run inversion", command= self.run_inversion())
+        run_inv_button = Button(inv_param_win, text="Run inversion", command = lambda: self.run_inversion(mode))
         run_inv_button.grid(row=7,column=1)
             
         close_button = Button(inv_param_win, text="Close", command= inv_param_win.destroy)
@@ -431,65 +431,88 @@ class Funcs():
     # Method for tbt post-stack inversion
     def tbt_inv(self, mode):
         global m_tbt
+        
         epsI = float(epsI_entry.get())
-        il_start = il[0]
         xl_start, xl_end = xl[0], xl[-1]
 
         if mode == "2D":
-            print("\n -------------Running trace-by-trace 2D inversion------------- \n")
-            d_small = data_cube[il_number - il_start, :, int(self.tmin/dt) : int(self.tmax/dt)]
+
+            d_small = data_cube[il_number - il[0], :, int(self.tmin/dt):int(self.tmax/dt)]
             d_small = np.swapaxes(d_small, -1, 0)
+
+
+            print("\n -------------Running trace-by-trace 2D inversion------------- \n")
+
             m_tbt, r_tbt = pylops.avo.poststack.PoststackInversion(d_small, wav_est/2, m0 = np.zeros_like(d_small), explicit=True,
                                                                         epsI = epsI, simultaneous = False)
             r_tbt = np.swapaxes(r_tbt, 0, -1)
+            m_tbt = np.swapaxes(m_tbt, 0, -1)
+
+            fig_tbt = plt.figure(figsize=(10, 5))
+            #fig.subplots_adjust(bottom=0.25)
+            gs = GridSpec(2, 2, height_ratios=(10,1))
+
+            ax_seismic = fig_tbt.add_subplot(gs[:1,:])
+            ax_histogram = fig_tbt.add_subplot(gs[-1,0])  
+            plt.subplots_adjust(left=0.098, right=1, top=0.955, bottom=0.112,hspace=0.25)            
+            im = ax_seismic.imshow(m_tbt.T, aspect='auto', cmap='seismic', vmin = 0.1*m_tbt.min(), vmax = 0.1*m_tbt.max(),
+                                extent=[xl_start, xl_end, t[int(self.tmax/dt)], t[int(self.tmin/dt)]])
+            ax_histogram.hist(m_tbt[0:300,:].T.flatten(), bins = 400)
+            ax_histogram.set_title('Histogram of pixel intensities')
+            plt.colorbar(im, ax=ax_seismic)
+
+            # Create the RangeSlider
+            # Add slider for interactive frame navigation along inline direction
+            axframe1 = plt.axes([0.1, 0.01, 0.5, 0.03], facecolor='lightgoldenrodyellow')
+            #slider_ax = fig.add_axes([0.20, 0.1, 0.60, 0.03])
+            slider = RangeSlider(axframe1, "Threshold", m_tbt.min(), m_tbt.max())
+
+            # Create the Vertical lines on the histogram
+            lower_limit_line = ax_histogram.axvline(slider.val[0], color='k')
+            upper_limit_line = ax_histogram.axvline(slider.val[1], color='k')
         
         if mode == "3D":
-            print("\n -------------Running trace-by-trace 3D inversion------------- \n")
-            d_small = data_cube[..., int(self.tmin/dt) : int(self.tmax/dt)]
+
+            d_small = data_cube[..., int(self.tmin/dt):int(self.tmax/dt)]
             d_small = np.swapaxes(d_small, -1, 0)
 
-            m_tbt = np.zeros_like(d_small)
-
-            for i in range(len(il)):
-                print(f'Running IL {i+1}/{il.shape[0]}\r', end="")
-                il_sect = d_small[...,i] 
-                m_relative_sec, _ = \
-                    pylops.avo.poststack.PoststackInversion(il_sect, wav_est/2, m0=np.zeros_like(d_small[...,i]), explicit=True,
-                                                                        epsI = epsI, simultaneous = False)
-                m_tbt[...,i] = m_relative_sec
             
-        m_tbt = np.swapaxes(m_tbt, 0, -1)
-        d_small = np.swapaxes(d_small, 0, -1)
+            print("\n -------------Running trace-by-trace 3D inversion------------- \n")
 
-        '''fig, ax = plt.subplots(1, 1, figsize=(10, 5))
-        c = ax.imshow(m_tbt.T, aspect='auto', cmap='seismic', vmin = m_tbt.min(), vmax= m_tbt.max(),
-                        extent = [xl_start, xl_end, t[int(self.tmax/dt)], t[int(self.tmin/dt)]])
-        plt.colorbar(c, ax=ax, pad=0.01)
-        plt.grid(False)
-        plt.show()'''
+            m_tbt, _ = \
+                    pylops.avo.poststack.PoststackInversion(d_small, wav_est/2, m0=np.zeros_like(d_small), explicit=True,
+                                                                        epsI = epsI, simultaneous = False)
+            
 
-        fig_tbt = plt.figure(figsize=(10, 5))
-        #fig.subplots_adjust(bottom=0.25)
-        gs = GridSpec(2, 2, height_ratios=(10,1))
+            m_tbt = np.swapaxes(m_tbt, 0, -1)
+            d_small = np.swapaxes(d_small, 0, -1)
 
-        ax_seismic = fig_tbt.add_subplot(gs[:1,:])
-        ax_histogram = fig_tbt.add_subplot(gs[-1,0])  
-        plt.subplots_adjust(left=0.098, right=1, top=0.955, bottom=0.112,hspace=0.25)            
-        im = ax_seismic.imshow(m_tbt.T, aspect='auto', cmap='seismic', vmin = 0.1*m_tbt.min(), vmax = 0.1*m_tbt.max(),
-                            extent=[xl_start, xl_end, t[int(self.tmax/dt)], t[int(self.tmin/dt)]])
-        ax_histogram.hist(m_tbt[0:300,:].T.flatten(), bins = 400)
-        ax_histogram.set_title('Histogram of pixel intensities')
-        plt.colorbar(im, ax=ax_seismic)
+            fig_tbt = plt.figure(figsize=(10, 5))
+            #fig.subplots_adjust(bottom=0.25)
+            gs = GridSpec(2, 2, height_ratios=(10,1))
 
-        # Create the RangeSlider
-        # Add slider for interactive frame navigation along inline direction
-        axframe1 = plt.axes([0.1, 0.01, 0.5, 0.03], facecolor='lightgoldenrodyellow')
-        #slider_ax = fig.add_axes([0.20, 0.1, 0.60, 0.03])
-        slider = RangeSlider(axframe1, "Threshold", m_tbt.min(), m_tbt.max())
+            ax_seismic = fig_tbt.add_subplot(gs[:1,:])
+            ax_histogram = fig_tbt.add_subplot(gs[-1,0])  
+            plt.subplots_adjust(left=0.098, right=1, top=0.955, bottom=0.112,hspace=0.25)            
+            im = ax_seismic.imshow(m_tbt[il_number - il[0], ...].T, aspect='auto', cmap='seismic',
+                                    vmin = 0.1*m_tbt[il_number - il[0], ...].T.min(),
+                                    vmax = 0.1*m_tbt[il_number - il[0], ...].T.max(),
+                                extent=[xl_start, xl_end, t[int(self.tmax/dt)], t[int(self.tmin/dt)]])
+            ax_histogram.hist(m_tbt[il_number - il[0],...].T.flatten(), bins = 400)
+            ax_histogram.set_title('Histogram of pixel intensities')
+            plt.colorbar(im, ax=ax_seismic)
 
-        # Create the Vertical lines on the histogram
-        lower_limit_line = ax_histogram.axvline(slider.val[0], color='k')
-        upper_limit_line = ax_histogram.axvline(slider.val[1], color='k')
+            # Create the RangeSlider
+            # Add slider for interactive frame navigation along inline direction
+            axframe1 = plt.axes([0.1, 0.01, 0.5, 0.03], facecolor='lightgoldenrodyellow')
+            #slider_ax = fig.add_axes([0.20, 0.1, 0.60, 0.03])
+            slider = RangeSlider(axframe1, "Threshold",
+                                m_tbt[il_number - il[0],...].min(),
+                                m_tbt[il_number - il[0],...].max())
+
+            # Create the Vertical lines on the histogram
+            lower_limit_line = ax_histogram.axvline(slider.val[0], color='k')
+            upper_limit_line = ax_histogram.axvline(slider.val[1], color='k')
 
 
         def update(val):
@@ -512,63 +535,127 @@ class Funcs():
         plt.grid(False)
         plt.show()
 
-        return m_tbt
-    # Method for spat reg post-stack inversion
-    def spat_inv(self):
-        niter_sr = int(niter_sr_entry.get())
-        epsI_sr = float(epsI_sr_entry.get())
-        epsR_sr = float(epsR_sr_entry.get())
-
-        il_start = il[0]
-        xl_start, xl_end = xl[0], xl[-1]
-        d_small = data_cube[il_number - il_start, :, int(self.tmin/dt):int(self.tmax/dt)]
-        d_small = np.swapaxes(d_small, -1, 0)
-
-        print("\n -------------Running spatially regularized simultaneous inversion------------- \n")
-            
-        if m_tbt is None:
-            m0 = np.zeros_like(d_small)
-        else:
-            m0 = m_tbt.T
-            
-        m_relative_reg, r_relative_reg = \
-            pylops.avo.poststack.PoststackInversion(d_small, wav_est/2, m0 = m0, epsI = epsI_sr, epsR = epsR_sr, 
-                                                **dict(iter_lim=niter_sr, show=2))
-
-        m_relative_reg = np.swapaxes(m_relative_reg, 0, -1)
-        r_relative_reg = np.swapaxes(r_relative_reg, 0, -1)
-        d_small = np.swapaxes(d_small, 0, -1)
-
         '''fig, ax = plt.subplots(1, 1, figsize=(10, 5))
-        c = ax.imshow(m_relative_reg.T, aspect='auto', cmap='seismic', vmin = m_relative_reg.min(), vmax = m_relative_reg.max(),
-                    extent=[xl_start, xl_end, t[int(self.tmax/dt)], t[int(self.tmin/dt)]])
+        c = ax.imshow(m_tbt.T, aspect='auto', cmap='seismic', vmin = m_tbt.min(), vmax= m_tbt.max(),
+                        extent = [xl_start, xl_end, t[int(self.tmax/dt)], t[int(self.tmin/dt)]])
         plt.colorbar(c, ax=ax, pad=0.01)
         plt.grid(False)
         plt.show()'''
 
-        fig = plt.figure(figsize=(10, 5))
-        #fig.subplots_adjust(bottom=0.25)
-        gs = GridSpec(2, 2, height_ratios=(10,1))
 
-        ax_seismic = fig.add_subplot(gs[:1,:])
-        ax_histogram = fig.add_subplot(gs[-1,0])  
-        plt.subplots_adjust(left=0.098, right=1, top=0.955, bottom=0.112,hspace=0.25)            
-        im = ax_seismic.imshow(m_relative_reg.T, aspect='auto', cmap='seismic', vmin = 0.1*m_relative_reg.min(), vmax = 0.1*m_relative_reg.max(),
-                            extent=[xl_start, xl_end, t[int(self.tmax/dt)], t[int(self.tmin/dt)]])
-        ax_histogram.hist(m_tbt[0:300,:].T.flatten(), bins = 400)
-        ax_histogram.set_title('Histogram of pixel intensities')
-        plt.colorbar(im, ax=ax_seismic)
+        return m_tbt
+    # Method for spat reg post-stack inversion
+    def spat_inv(self, mode):
+        niter_sr = int(niter_sr_entry.get())
+        epsI_sr = float(epsI_sr_entry.get())
+        epsR_sr = float(epsR_sr_entry.get())
 
-        # Create the RangeSlider
-        # Add slider for interactive frame navigation along inline direction
-        axframe1 = plt.axes([0.1, 0.01, 0.5, 0.03], facecolor='lightgoldenrodyellow')
-        #slider_ax = fig.add_axes([0.20, 0.1, 0.60, 0.03])
-        slider = RangeSlider(axframe1, "Threshold", m_relative_reg.min(), m_relative_reg.max())
+        xl_start, xl_end = xl[0], xl[-1]
 
-        # Create the Vertical lines on the histogram
-        lower_limit_line = ax_histogram.axvline(slider.val[0], color='k')
-        upper_limit_line = ax_histogram.axvline(slider.val[1], color='k')
+        if mode == "2D":
+            d_small = data_cube[il_number - il[0], :, int(self.tmin/dt):int(self.tmax/dt)]
+            d_small = np.swapaxes(d_small, -1, 0)
 
+            if m_tbt is None:
+                m0 = np.zeros_like(d_small)
+            else:
+                if m_tbt.shape != d_small.shape:
+                    m0 = m_tbt[il_number - il[0], ...]
+                    m0 = np.swapaxes(m0, -1, 0)
+                    print("Adjusted shape of m0:", m0.shape)
+                    print("Shape of d_small:", d_small.shape)
+                else:
+                    m0 = m_tbt
+                    print("Shape of m0:", m0.shape)
+                    print("Shape of d_small:", d_small.shape)
+            print("\n -------------Running spatilly regularized 2D inversion------------- \n")     
+            m_relative_reg, r_relative_reg = \
+                pylops.avo.poststack.PoststackInversion(d_small, wav_est/2, m0 = m0, epsI = epsI_sr, epsR = epsR_sr, 
+                                                    **dict(iter_lim=niter_sr, show=2))
+            
+            m_relative_reg = np.swapaxes(m_relative_reg, 0, -1)
+            r_relative_reg = np.swapaxes(r_relative_reg, 0, -1)
+            d_small = np.swapaxes(d_small, 0, -1)
+            
+            fig = plt.figure(figsize=(10, 5))
+            #fig.subplots_adjust(bottom=0.25)
+            gs = GridSpec(2, 2, height_ratios=(10,1))
+
+            ax_seismic = fig.add_subplot(gs[:1,:])
+            ax_histogram = fig.add_subplot(gs[-1,0])  
+            plt.subplots_adjust(left=0.098, right=1, top=0.955, bottom=0.112,hspace=0.25)            
+            im = ax_seismic.imshow(m_relative_reg.T, aspect='auto', cmap='seismic', 
+                                vmin = 0.1*m_relative_reg.min(),
+                                vmax = 0.1*m_relative_reg.max(),
+                                extent=[xl_start, xl_end, t[int(self.tmax/dt)], t[int(self.tmin/dt)]])
+            ax_histogram.hist(m_relative_reg[0:300,:].T.flatten(), bins = 400)
+
+            ax_histogram.set_title('Histogram of pixel intensities')
+            plt.colorbar(im, ax=ax_seismic)
+
+            # Create the RangeSlider
+            # Add slider for interactive frame navigation along inline direction
+            axframe1 = plt.axes([0.1, 0.01, 0.5, 0.03], facecolor='lightgoldenrodyellow')
+            #slider_ax = fig.add_axes([0.20, 0.1, 0.60, 0.03])
+            slider = RangeSlider(axframe1, "Threshold",
+                                m_relative_reg.min(),
+                                m_relative_reg.max())
+            
+            # Create the Vertical lines on the histogram
+            lower_limit_line = ax_histogram.axvline(slider.val[0], color='k')
+            upper_limit_line = ax_histogram.axvline(slider.val[1], color='k')
+
+
+        if mode == "3D":
+ 
+            d_small = data_cube[..., int(self.tmin/dt):int(self.tmax/dt)]
+            d_small = np.swapaxes(d_small, -1, 0)
+
+            if m_tbt is None:
+                m0 = np.zeros_like(d_small)
+            else:
+                m0 = m_tbt.T
+
+            print("\n -------------Running spatilly regularized 3D inversion------------- \n")
+
+            m_relative_reg = np.full_like(d_small[:, :, :], np.nan)
+
+            for i in range(len(il)):
+                print(f'Running IL {i+1}/{il.shape[0]}\r', end="")
+                il_sect = d_small[...,i] 
+                m_relative_reg_sect, _ = \
+                    pylops.avo.poststack.PoststackInversion(il_sect, wav_est, m0=m0[...,i], epsI=epsI_sr, epsR=epsR_sr, 
+                                                            **dict(iter_lim=niter_sr))
+                m_relative_reg[...,i] = m_relative_reg_sect
+
+            m_relative_reg = np.swapaxes(m_relative_reg, 0, -1)
+            d_small = np.swapaxes(d_small, 0, -1)
+
+            fig = plt.figure(figsize=(10, 5))
+            #fig.subplots_adjust(bottom=0.25)
+            gs = GridSpec(2, 2, height_ratios=(10,1))
+
+            ax_seismic = fig.add_subplot(gs[:1,:])
+            ax_histogram = fig.add_subplot(gs[-1,0])  
+            plt.subplots_adjust(left=0.098, right=1, top=0.955, bottom=0.112,hspace=0.25)            
+            im = ax_seismic.imshow(m_relative_reg[il_number - il[0], ...].T, aspect='auto', cmap='seismic', 
+                                vmin = 0.1*m_relative_reg[il_number - il[0],...].T.min(),
+                                vmax = 0.1*m_relative_reg[il_number - il[0],...].T.max(),
+                                extent=[xl_start, xl_end, t[int(self.tmax/dt)], t[int(self.tmin/dt)]])
+            ax_histogram.hist(m_relative_reg[il_number - il[0],...].T.flatten(), bins = 400)
+            ax_histogram.set_title('Histogram of pixel intensities')
+            plt.colorbar(im, ax=ax_seismic)
+
+            # Create the RangeSlider
+            # Add slider for interactive frame navigation along inline direction
+            axframe1 = plt.axes([0.1, 0.01, 0.5, 0.03], facecolor='lightgoldenrodyellow')
+            #slider_ax = fig.add_axes([0.20, 0.1, 0.60, 0.03])
+            slider = RangeSlider(axframe1, "Threshold",
+                                m_relative_reg[il_number - il[0],...].min(),
+                                m_relative_reg[il_number - il[0],...].max())
+            # Create the Vertical lines on the histogram
+            lower_limit_line = ax_histogram.axvline(slider.val[0], color='k')
+            upper_limit_line = ax_histogram.axvline(slider.val[1], color='k')
 
         def update(val):
             # The val passed to a callback by the RangeSlider will
@@ -585,15 +672,13 @@ class Funcs():
             # Redraw the figure to ensure it updates
             #fig.canvas.draw_idle()
 
-
         slider.on_changed(update)
         plt.grid(False)
         plt.show()
 
 
-
     # Method for blocky reg post-stack inversion
-    def blocky_inv(self):
+    def blocky_inv(self, mode):
         niter_b = int(niter_in_b_entry.get())
         niter_out_b = int(niter_out_b_entry.get())
         niter_in_b = int(niter_in_b_entry.get())
@@ -604,51 +689,97 @@ class Funcs():
 
         il_start = il[0]
         xl_start, xl_end = xl[0], xl[-1]
-        d_small = data_cube[il_number - il_start, :, int(self.tmin/dt) : int(self.tmax/dt)]
-        d_small = np.swapaxes(d_small, -1, 0)
 
-        print("\n -------------Running spatially regularized blocky promoting simultaneous inversion------------- \n")
+
+        if mode == "2D":
+            d_small = data_cube[il_number - il[0], :, int(self.tmin/dt) : int(self.tmax/dt)]
+            d_small = np.swapaxes(d_small, -1, 0)
+
+            print("\n -------------Running spatially regularized blocky promoting simultaneous 2D inversion------------- \n")
+
             
-        m_blocky, r_blocky = \
-            pylops.avo.poststack.PoststackInversion(d_small, wav_est/2, m0 = np.zeros_like(d_small), explicit = False, 
-                                                        epsR = epsR_b, epsRL1 = epsRL1_b,
-                                                        **dict(mu = mu_b, niter_outer = niter_out_b, 
-                                                            niter_inner = niter_in_b, show = True,
-                                                            iter_lim = niter_b, damp = epsI_b))
-        m_blocky = np.swapaxes(m_blocky, 0, -1)
-        r_blocky = np.swapaxes(r_blocky, 0, -1)
-        d_small = np.swapaxes(d_small, 0, -1)
+            m_blocky, r_blocky = \
+                pylops.avo.poststack.PoststackInversion(d_small, wav_est/2, m0 = np.zeros_like(d_small), explicit = False, 
+                                                            epsR = epsR_b, epsRL1 = epsRL1_b,
+                                                            **dict(mu = mu_b, niter_outer = niter_out_b, 
+                                                                niter_inner = niter_in_b, show = True,
+                                                                iter_lim = niter_b, damp = epsI_b))
+            m_blocky = np.swapaxes(m_blocky, 0, -1)
+            r_blocky = np.swapaxes(r_blocky, 0, -1)
+            d_small = np.swapaxes(d_small, 0, -1)
             
-        '''fig, ax = plt.subplots(1, 1, figsize=(10, 5))
-        c = ax.imshow(m_blocky.T, aspect='auto', cmap='seismic', vmin = m_blocky.min(), vmax = m_blocky.max(),
-                extent = [xl_start, xl_end, t[int(self.tmax/dt)], t[int(self.tmin/dt)]])
-        plt.colorbar(c, ax=ax, pad=0.01)
-        plt.grid(False)
-        plt.show()'''
 
-        fig = plt.figure(figsize=(10, 5))
-        #fig.subplots_adjust(bottom=0.25)
-        gs = GridSpec(2, 2, height_ratios=(10,1))
+            fig = plt.figure(figsize=(10, 5))
+            #fig.subplots_adjust(bottom=0.25)
+            gs = GridSpec(2, 2, height_ratios=(10,1))
 
-        ax_seismic = fig.add_subplot(gs[:1,:])
-        ax_histogram = fig.add_subplot(gs[-1,0])  
-        plt.subplots_adjust(left=0.098, right=1, top=0.955, bottom=0.112,hspace=0.25)            
-        im = ax_seismic.imshow(m_blocky.T, aspect='auto', cmap='seismic', vmin = 0.1*m_blocky.min(), vmax = 0.1*m_blocky.max(),
-                            extent=[xl_start, xl_end, t[int(self.tmax/dt)], t[int(self.tmin/dt)]])
-        ax_histogram.hist(m_blocky[0:300,:].T.flatten(), bins = 400)
-        ax_histogram.set_title('Histogram of pixel intensities')
-        plt.colorbar(im, ax=ax_seismic)
+            ax_seismic = fig.add_subplot(gs[:1,:])
+            ax_histogram = fig.add_subplot(gs[-1,0])  
+            plt.subplots_adjust(left=0.098, right=1, top=0.955, bottom=0.112,hspace=0.25)            
+            im = ax_seismic.imshow(m_blocky.T, aspect='auto', cmap='seismic', vmin = 0.1*m_blocky.min(), vmax = 0.1*m_blocky.max(),
+                                extent=[xl_start, xl_end, t[int(self.tmax/dt)], t[int(self.tmin/dt)]])
+            ax_histogram.hist(m_blocky[0:300,:].T.flatten(), bins = 400)
+            ax_histogram.set_title('Histogram of pixel intensities')
+            plt.colorbar(im, ax=ax_seismic)
 
-        # Create the RangeSlider
-        # Add slider for interactive frame navigation along inline direction
-        axframe1 = plt.axes([0.1, 0.01, 0.5, 0.03], facecolor='lightgoldenrodyellow')
-        #slider_ax = fig.add_axes([0.20, 0.1, 0.60, 0.03])
-        slider = RangeSlider(axframe1, "Threshold", m_blocky.min(), m_blocky.max())
+            # Create the RangeSlider
+            # Add slider for interactive frame navigation along inline direction
+            axframe1 = plt.axes([0.1, 0.01, 0.5, 0.03], facecolor='lightgoldenrodyellow')
+            #slider_ax = fig.add_axes([0.20, 0.1, 0.60, 0.03])
+            slider = RangeSlider(axframe1, "Threshold", m_blocky.min(), m_blocky.max())
 
-        # Create the Vertical lines on the histogram
-        lower_limit_line = ax_histogram.axvline(slider.val[0], color='k')
-        upper_limit_line = ax_histogram.axvline(slider.val[1], color='k')
+            # Create the Vertical lines on the histogram
+            lower_limit_line = ax_histogram.axvline(slider.val[0], color='k')
+            upper_limit_line = ax_histogram.axvline(slider.val[1], color='k')
 
+        if mode == "3D":
+ 
+            d_small = data_cube[..., int(self.tmin/dt):int(self.tmax/dt)]
+            d_small = np.swapaxes(d_small, -1, 0)
+
+            print("\n -------------Running spatially regularized blocky promoting simultaneous 3D inversion------------- \n")
+
+            m_blocky = np.full_like(d_small[:, :, :], np.nan)
+
+            for i in range(len(il)):
+                print(f'Running IL {i+1}/{il.shape[0]}\r', end="")
+                il_sect = d_small[...,i] 
+                m_blocky_sect, _ = \
+                    pylops.avo.poststack.PoststackInversion(il_sect, wav_est/2, m0 = np.zeros_like(il_sect), explicit = False, 
+                                                            epsR = epsR_b, epsRL1 = epsRL1_b,
+                                                            **dict(mu = mu_b, niter_outer = niter_out_b, 
+                                                                niter_inner = niter_in_b, show = False,
+                                                                iter_lim = niter_b, damp = epsI_b))
+                m_blocky[...,i] = m_blocky_sect
+
+            m_blocky = np.swapaxes(m_blocky, 0, -1)
+            d_small = np.swapaxes(d_small, 0, -1)
+
+            fig = plt.figure(figsize=(10, 5))
+            #fig.subplots_adjust(bottom=0.25)
+            gs = GridSpec(2, 2, height_ratios=(10,1))
+
+            ax_seismic = fig.add_subplot(gs[:1,:])
+            ax_histogram = fig.add_subplot(gs[-1,0])  
+            plt.subplots_adjust(left=0.098, right=1, top=0.955, bottom=0.112,hspace=0.25)            
+            im = ax_seismic.imshow(m_blocky[il_number - il[0], ...].T, aspect='auto', cmap='seismic', 
+                                vmin = 0.1*m_blocky[il_number - il[0],...].T.min(),
+                                vmax = 0.1*m_blocky[il_number - il[0],...].T.max(),
+                                extent=[xl_start, xl_end, t[int(self.tmax/dt)], t[int(self.tmin/dt)]])
+            ax_histogram.hist(m_blocky[il_number - il[0],...].T.flatten(), bins = 400)
+            ax_histogram.set_title('Histogram of pixel intensities')
+            plt.colorbar(im, ax=ax_seismic)
+
+            # Create the RangeSlider
+            # Add slider for interactive frame navigation along inline direction
+            axframe1 = plt.axes([0.1, 0.01, 0.5, 0.03], facecolor='lightgoldenrodyellow')
+            #slider_ax = fig.add_axes([0.20, 0.1, 0.60, 0.03])
+            slider = RangeSlider(axframe1, "Threshold",
+                                m_blocky[il_number - il[0],...].min(),
+                                m_blocky[il_number - il[0],...].max())
+            # Create the Vertical lines on the histogram
+            lower_limit_line = ax_histogram.axvline(slider.val[0], color='k')
+            upper_limit_line = ax_histogram.axvline(slider.val[1], color='k')
 
         def update(val):
             # The val passed to a callback by the RangeSlider will
@@ -673,10 +804,10 @@ class Funcs():
     def inversion_param_wind(self, mode):
         inversion_type = self.inv_type.get()
         if inversion_type == 1:
-            self.blocky_inv_param_win()
+            self.blocky_inv_param_win(mode)
         if inversion_type == 2:
         # Run regularized spatial inversion
-            self.spat_inv_param_win()
+            self.spat_inv_param_win(mode)
         if inversion_type == 3:
         # Run regularized inversion
             self.tbt_inv_param_win(mode)
@@ -684,10 +815,10 @@ class Funcs():
     def run_inversion(self, mode):
         self.inversion_type = self.inv_type.get()
         if self.inversion_type == 1:
-            self.blocky_inv()
+            self.blocky_inv(mode)
         elif self.inversion_type == 2:
         # Run regularized spatial inversion
-            self.spat_inv()
+            self.spat_inv(mode)
         elif self.inversion_type == 3:
         # Run regularized inversion
             self.tbt_inv(mode)
