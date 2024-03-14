@@ -247,8 +247,6 @@ class Funcs():
             wavs = np.array(wavs)
             times = np.array(times)
 
-            # Example of plotting
-            import matplotlib.pyplot as plt
             plt.figure(figsize=(4, 3))
             for i in range(len(wavs)):
                 plt.plot(times[i], wavs[i])
