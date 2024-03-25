@@ -168,7 +168,7 @@ class Ui_MainWindow(object):
 
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
-        MainWindow.setWindowTitle(_translate("MainWindow", "Simulator"))
+        MainWindow.setWindowTitle(_translate("MainWindow", "3D Seismic Viewer"))
         self.menuFiles.setTitle(_translate("MainWindow", "Files"))
         self.actionLoad_segy.setText(_translate("MainWindow", "Load SEGY"))
         self.actionClose.setText(_translate("MainWindow", "Close"))
