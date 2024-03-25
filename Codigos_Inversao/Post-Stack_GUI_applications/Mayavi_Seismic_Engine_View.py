@@ -14,7 +14,6 @@ from mayavi.core.ui.api import MayaviScene, MlabSceneModel, SceneEditor
 from mayavi.core.ui.engine_view import EngineView
 from mayavi import mlab
 
-
 data_cube = None
 ######################################################################
 class Mayavi(HasTraits):
@@ -27,7 +26,6 @@ class Mayavi(HasTraits):
 
     # The current selection in the engine tree view.
     current_selection = Property
-
 
     ######################
     view = View(HSplit(VSplit(Item(name='engine_view',
@@ -62,8 +60,7 @@ class Mayavi(HasTraits):
         # the UI of a sub-object in T3.
         self.scene.engine.on_trait_change(self._selection_change,
                                           'current_selection')
-            
-        
+                 
     def _selection_change(self, old, new):
         self.trait_property_changed('current_selection', old, new)
 
@@ -117,7 +114,6 @@ class Ui_MainWindow(object):
         if filename:
             self.label.setText(f'SEG-Y File Selected: {filename}')
             self.update_plot()
-
 
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
