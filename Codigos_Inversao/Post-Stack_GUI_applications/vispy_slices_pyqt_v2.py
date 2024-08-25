@@ -29,7 +29,7 @@ class CanvasWrapper:
         self.data = self.dataset[self.slice_il,:,:].T
         
         # Create the images for each slice
-        self.image_il = visuals.Image(self.data[::-1,:], cmap="gray", parent=self.view_il.scene)
+        self.image_il = visuals.Image(self.data[::-1,:], cmap="gray", parent=self.view_il.scene, interpolation = 'spline36')
         
         # Set up cameras
         self.view_il.camera = scene.PanZoomCamera(interactive=True)
