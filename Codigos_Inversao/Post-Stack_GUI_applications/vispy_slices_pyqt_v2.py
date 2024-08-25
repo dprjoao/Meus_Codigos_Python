@@ -1,4 +1,3 @@
-import seismic_canvas
 import numpy as np
 from PyQt5 import QtWidgets, QtCore
 from vispy.scene import SceneCanvas, visuals
@@ -8,6 +7,7 @@ import h5py
 
 IMAGE_SHAPE = (400, 300)  # (height, width)
 CANVAS_SIZE = (900, 900)  # (width, height)
+il_buffer_size = 10
 
 class CanvasWrapper:
     def __init__(self, size=CANVAS_SIZE, keys='interactive'):
@@ -19,16 +19,17 @@ class CanvasWrapper:
         # Initialize the HDF5 dataset reference
         self.load_data()
 
+
         # Initialize slice indices
         self.slice_il = self.dataset.shape[0] // 2
         
         # Add views for each orthogonal slice
         self.view_il = self.grid.add_view(0, 0, bgcolor='white')
 
-        data = self.dataset[self.slice_il,:,:].T
+        self.data = self.dataset[self.slice_il,:,:].T
         
         # Create the images for each slice
-        self.image_il = visuals.Image(data[::-1,:], cmap="gray", parent=self.view_il.scene)
+        self.image_il = visuals.Image(self.data[::-1,:], cmap="gray", parent=self.view_il.scene)
         
         # Set up cameras
         self.view_il.camera = scene.PanZoomCamera(interactive=True)
@@ -40,18 +41,25 @@ class CanvasWrapper:
         self.canvas.events.key_press.connect(self.on_key_press)
         self.update_view_ranges()
 
-    def load_data(self, filepath='seismic_data_chunked.h5', dtype=np.float32):
+    def load_data(self, filepath='seismic.h5', dtype=np.float32):
         # Open the HDF5 file and get a reference to the dataset
-        self.hdf5_file = h5py.File(filepath, 'r')
-        self.dataset = self.hdf5_file['data']
+        self.hdf5_file = h5py.File(filepath, 'r+')
+        self.dataset = self.hdf5_file['93376a8e-31cc-436e-b353-fbd4f4540e42']
 
     def update_view_ranges(self):
         self.view_il.camera.set_range(x=(0, self.dataset.shape[1]), y=(0, self.dataset.shape[2]), margin=0)
 
-    def update_slices(self, x):
+    def update_slices(self, x):  
         # Load only the required slice from the dataset
-        self.slice_x = x
-        img = self.dataset[self.slice_x, :, :].T
+        self.slice_il = x
+
+        if self.slice_il < il_buffer_size or self.slice_il > self.dataset.shape[0] - il_buffer_size: 
+            print(f"you are the the ext right or left: {self.slice_il}")
+            
+        else:
+            print(f"We have room!{self.slice_il}")
+
+        img = self.dataset[self.slice_il, :, :].T
         self.image_il.set_data(img[::-1, :])
         self.canvas.update()
 
@@ -63,6 +71,7 @@ class CanvasWrapper:
             self.view_il.camera.set_state(self.initial_camera_transform)
             self.view_il.camera.rect = self.initial_camera_rect
             self.view_il.camera.view_changed()
+
 
     def __del__(self):
         # Close the HDF5 file when the object is deleted
@@ -125,18 +134,25 @@ class Controls(QtWidgets.QWidget):
     def on_backward_button_click(self):
         if self._canvas_wrapper.slice_il > 0:
             self._canvas_wrapper.slice_il -= 1
+            # Temporarily disconnect the slider signal to prevent double-calling
+            self.slice_il_slider.blockSignals(True)
             self.slice_il_slider.setValue(self._canvas_wrapper.slice_il)
+            self.slice_il_slider.blockSignals(False)
             self._canvas_wrapper.update_slices(self._canvas_wrapper.slice_il)
 
     def on_forward_button_click(self):
-        if self._canvas_wrapper.slice_il < self._canvas_wrapper.vol.shape[0] - 1:
+        if self._canvas_wrapper.slice_il < self._canvas_wrapper.dataset.shape[0] - 1:
             self._canvas_wrapper.slice_il += 1
+            # Temporarily disconnect the slider signal to prevent double-calling
+            self.slice_il_slider.blockSignals(True)
             self.slice_il_slider.setValue(self._canvas_wrapper.slice_il)
+            self.slice_il_slider.blockSignals(False)
             self._canvas_wrapper.update_slices(self._canvas_wrapper.slice_il)
-            
+
     def on_colormap_change(self, index):
         colormap = self.sender().currentText()
         self._canvas_wrapper.update_colormap(colormap)
+
 
 if __name__ == "__main__":
     app = use_app("pyqt5")
