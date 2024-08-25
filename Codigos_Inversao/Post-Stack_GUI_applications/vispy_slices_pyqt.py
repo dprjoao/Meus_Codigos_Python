@@ -42,7 +42,7 @@ class CanvasWrapper:
         
         self.grid = self.canvas.central_widget.add_grid()
         
-        self.vol = self.load_data(filepath = 'C:/Users/jp_reis/Downloads/train_seismic.npy')
+        self.vol = self.load_data(filepath = 'train_seismic.npy')
 
         # Initialize slice indices
         self.slice_x = self.vol.shape[0] // 2
